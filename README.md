@@ -15,8 +15,8 @@ The client jar is **optional** and adds only the on-screen indicator. The server
 
 ## Install
 
-Drop the jar in `mods/` on the server. That is the whole installation — every feature works with
-vanilla clients.
+Grab the jar from [Releases](https://github.com/arkon-interactive/Arkon-Essentials/releases) and drop it
+in `mods/` on the server. That is the whole installation — every feature works with vanilla clients.
 
 Players who also install it get the HUD indicator showing their current mode.
 

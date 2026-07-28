@@ -441,6 +441,36 @@ official mappings and needs no Loom remap), `"suggests"` in `fabric.mod.json`, a
 entrypoint that only Mod Menu itself ever asks for. Verified: a dedicated server with no Mod Menu
 installed boots clean (`Done (0.541s)`, no entrypoint complaint).
 
+## The repo and releases
+
+`https://github.com/arkon-interactive/Arkon-Essentials`, branch `main`. Git identity and credentials are
+already configured locally (Git Credential Manager), so `git push` works without anyone handling a token.
+**The `gh` CLI is not installed**, which is why nothing here depends on it.
+
+Two workflows in `.github/workflows/`:
+
+- **`build.yml`** — every push to `main` and every PR. Its real value is running on a *clean checkout*:
+  it catches a file that was never committed, or one that only builds because of local Gradle state.
+- **`release.yml`** — triggered by pushing a `v*` tag. It builds and publishes the jars using the
+  runner's built-in `GITHUB_TOKEN`, so releases need no personal access token anywhere.
+
+**Cutting a release is two commands**, after `mod_version` in `gradle.properties` is already correct:
+
+```bash
+git tag v0.26.0 && git push origin v0.26.0
+```
+
+The release job **refuses to publish if the tag disagrees with `mod_version`**. Without that check a
+mismatched tag would ship a jar whose own version string is wrong — invisible until someone reports a bug
+against a version that was never built.
+
+Two things that would break CI and are easy to reintroduce:
+
+- **`gradlew` must stay mode `100755`.** Committed from Windows it lands as `100644` and the Linux runner
+  fails with "Permission denied". Fixed once with `git update-index --chmod=+x gradlew`; check it survives
+  if the wrapper is ever regenerated.
+- **`run/` must stay ignored.** It holds the dev world, logs and any test mods (LuckPerms), and is large.
+
 ## Versioning and save-data safety
 
 The mod is **pre-1.0 on purpose** and stays there until the feature set settles: `0.y.z`, where `y`
