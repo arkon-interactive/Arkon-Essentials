@@ -1,0 +1,56 @@
+name: Release
+
+# Pushing a version tag is the whole release process. Nothing here needs a personal access token:
+# the runner's built-in GITHUB_TOKEN is enough, which is why releases work without anyone holding
+# credentials locally.
+#
+#   git tag v0.26.0 && git push origin v0.26.0
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  # Needed to create the release and upload the jars. Nothing else is granted.
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: gradle
+
+      # A tag that disagrees with gradle.properties would publish a jar whose own version string is
+      # wrong — invisible until someone reports a bug against a version that was never built. Fail
+      # loudly here instead, before anything is published.
+      - name: Check the tag matches mod_version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          declared="$(grep -E '^mod_version=' gradle.properties | cut -d= -f2 | tr -d '[:space:]')"
+          if [ "$tag" != "$declared" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match mod_version=$declared in gradle.properties."
+            echo "Bump gradle.properties, or retag, so the jar and the release agree."
+            exit 1
+          fi
+          echo "Tag and mod_version agree on $declared."
+
+      - name: Build
+        run: ./gradlew build --no-daemon
+
+      # gh is preinstalled on GitHub-hosted runners, so this needs no extra action or dependency.
+      # --generate-notes writes the changelog from commits since the previous tag.
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            build/libs/arkonessentials-*.jar \
+            --title "Arkon Essentials $GITHUB_REF_NAME" \
+            --generate-notes

@@ -1,0 +1,19 @@
+{
+	"required": true,
+	"minVersion": "0.8",
+	"package": "com.maxazarcon.arkonessentials.mixin",
+	"mixins": [
+		"ItemStackMixin",
+		"LivingEntityMixin",
+		"PlayerListMixin",
+		"PlayerMixin",
+		"ServerGamePacketListenerImplMixin",
+		"ServerPlayerGameModeMixin",
+		"ServerPlayerMixin",
+		"TeleportCommandMixin",
+		"TrackedEntityMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

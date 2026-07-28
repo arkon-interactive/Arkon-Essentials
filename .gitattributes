@@ -1,0 +1,17 @@
+# Normalise line endings so the repo stays LF regardless of who clones it. Without this, committing
+# from Windows can turn every file in a diff into a whole-file change and make history unreadable.
+* text=auto eol=lf
+
+# Must keep CRLF to run on Windows.
+*.bat text eol=crlf
+
+# Must keep LF to run on Linux and macOS, including the Gradle wrapper script.
+*.sh text eol=lf
+gradlew text eol=lf
+
+# Binary: never touch these.
+*.jar binary
+*.png binary
+*.ogg binary
+*.nbt binary
+*.dat binary

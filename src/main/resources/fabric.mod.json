@@ -1,0 +1,35 @@
+{
+	"schemaVersion": 1,
+	"id": "arkonessentials",
+	"version": "${version}",
+	"name": "Arkon Essentials",
+	"description": "Server essentials: admin, build and god-tier modes with separate loadouts, vanish, flight, teleports and homes — plus a public /tps.",
+	"authors": [
+		"Max Azarcon"
+	],
+	"license": "MIT",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.maxazarcon.arkonessentials.ArkonEssentials"
+		],
+		"client": [
+			"com.maxazarcon.arkonessentials.client.ArkonEssentialsClient"
+		],
+		"modmenu": [
+			"com.maxazarcon.arkonessentials.client.ArkonModMenu"
+		]
+	},
+	"mixins": [
+		"arkonessentials.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"minecraft": "~26.2",
+		"java": ">=25",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"modmenu": ">=20.0.0"
+	}
+}

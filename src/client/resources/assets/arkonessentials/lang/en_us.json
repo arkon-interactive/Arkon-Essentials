@@ -1,0 +1,27 @@
+{
+	"arkonessentials.options.title": "Arkon Essentials",
+
+	"arkonessentials.options.enabled": "Show Indicators",
+	"arkonessentials.options.shadow": "Text Shadow",
+	"arkonessentials.options.scale": "Text Scale",
+
+	"arkonessentials.options.anchor": "Screen Corner",
+	"arkonessentials.options.anchor.top_left": "Top Left",
+	"arkonessentials.options.anchor.top_right": "Top Right",
+	"arkonessentials.options.anchor.bottom_left": "Bottom Left",
+	"arkonessentials.options.anchor.bottom_right": "Bottom Right",
+
+	"arkonessentials.options.offset_x": "Horizontal Offset",
+	"arkonessentials.options.offset_y": "Vertical Offset",
+
+	"arkonessentials.options.indicators": "Indicators",
+	"arkonessentials.options.indicator.admin": "Admin Mode",
+	"arkonessentials.options.indicator.passive": "Passive Mode",
+	"arkonessentials.options.indicator.build": "Build Mode",
+	"arkonessentials.options.indicator.god": "God Mode",
+	"arkonessentials.options.indicator.demigod": "Demigod",
+	"arkonessentials.options.indicator.ghost": "Ghost",
+	"arkonessentials.options.indicator.flight": "Flight Enabled",
+	"arkonessentials.options.indicator.afk": "AFK",
+	"arkonessentials.options.indicator.offline": "Offline Mode"
+}

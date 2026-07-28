@@ -1,0 +1,35 @@
+name: Build
+
+# Every push to main and every pull request. Catches the things that only show up on a clean
+# checkout — a file that was never committed, or one that only compiles because of local Gradle state.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          # Required since Minecraft 26.1. Not a free choice — the toolchain will not build on less.
+          java-version: '25'
+          cache: gradle
+
+      # Compiles both source sets and runs the codec round-trip tests.
+      - name: Build
+        run: ./gradlew build --no-daemon
+
+      # Kept for 30 days so a failing report can be downloaded rather than reproduced locally.
+      - name: Upload jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: arkonessentials-dev-build
+          path: build/libs/*.jar
+          retention-days: 30
