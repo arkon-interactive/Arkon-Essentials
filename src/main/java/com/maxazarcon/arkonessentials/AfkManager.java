@@ -113,6 +113,25 @@ public final class AfkManager {
 	}
 
 	/**
+	 * Drops AFK without announcing anything.
+	 *
+	 * <p>For {@code /fakeleave}, where the ordinary "no longer AFK" line would be exactly the broadcast
+	 * the fake departure is trying to prevent. Everywhere else, use {@link #toggle} so the state change
+	 * is visible to whoever was told about it.
+	 */
+	public static void clear(final ServerPlayer player) {
+		Session session = SESSIONS.get(player.getUUID());
+
+		if (session == null || !session.afk) {
+			return;
+		}
+
+		session.afk = false;
+		session.reason = null;
+		AdminManager.syncTo(player);
+	}
+
+	/**
 	 * Handles {@code /afk}, both directions.
 	 *
 	 * @param reason shown alongside the announcement, or null for the plain message
@@ -226,7 +245,11 @@ public final class AfkManager {
 	 * person in it.
 	 */
 	private static void announce(final ServerPlayer player, final Component message) {
-		if (AdminManager.getState(player).hiddenFromPlayers()) {
+		// Both conditions matter, and appearing-offline is the one that is easy to miss: /fakeleave accepts
+		// any state including NONE, so someone can be appearing offline while hiddenFromPlayers() is false.
+		// Checking only the state would broadcast the name of someone the server has just announced as
+		// having left.
+		if (AdminManager.getState(player).hiddenFromPlayers() || PresenceManager.isAppearingOffline(player)) {
 			player.sendSystemMessage(message);
 			return;
 		}

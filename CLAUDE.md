@@ -646,6 +646,7 @@ The five mixins each cover one leak:
 |---|---|
 | `LivingEntityMixin` | `canBeSeenByAnyone()` → false. Single chokepoint for mob targeting: `TargetingConditions#test` checks it first and `canBeSeenAsEnemy` delegates to it. |
 | `TrackedEntityMixin` | Cancels `updatePlayer` so the entity is never sent to disallowed clients. This is what vanish actually *is*. |
+| `ListPlayersCommandMixin` | Filters `/list` — redirects `getPlayers()` inside `format`, the single source of both the names and the count |
 | `PlayerListMixin` | Suppresses the join message |
 | `ServerGamePacketListenerImplMixin` | Suppresses the leave message |
 | `ServerPlayerMixin` | Records `lastNonCreativeMode` on every `setGameMode` |
@@ -655,6 +656,20 @@ The five mixins each cover one leak:
 
 Tab list and locator bar are handled without mixins — by pushing packets from `refreshVisibility` and
 calling `ServerWaypointManager.track/untrackWaypoint`.
+
+**What vanish does and does not reach.** Because it works at the tracker, a client is never told the
+player exists — so **client-side minimaps (JourneyMap, Xaero's, VoxelMap) show nothing**, which an
+invisibility effect would not achieve (an invisible entity is still an entity the radar can draw). The
+gap is **server-side web maps (Dynmap, BlueMap, squaremap)**: they read `PlayerList` directly and never
+touch the client packet path, so they need each mod's own vanish API and are currently unhandled. The
+**server ping count and sample** are likewise unfiltered — `MinecraftServer` builds them straight from
+`players.size()`. Anything the player *does* (chat, block changes, container use) is also still visible;
+vanish hides presence, not actions.
+
+**`/afk` is refused while appearing offline**, and `/fakeleave` silently clears an existing AFK via
+`AfkManager.clear` (no announcement). `AfkManager.announce` additionally suppresses for
+`isAppearingOffline`, not just `hiddenFromPlayers` — necessary because `/fakeleave` accepts `none`, so
+appearing-offline and not-hidden can be true at once.
 
 ### Flight (`/fly`, `/fly speed <1-3>`, per-player, persisted)
 

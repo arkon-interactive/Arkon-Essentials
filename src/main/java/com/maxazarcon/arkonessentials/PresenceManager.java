@@ -44,6 +44,14 @@ public final class PresenceManager {
 	 */
 	public static void fakeLeave(final ServerPlayer player, final AdminState state) {
 		AdminManager.setState(player, state);
+
+		// Cleared before the flag goes up, so the "no longer AFK" line is suppressed along with everything
+		// else. Someone who was AFK and then fakes a departure must not have a return announcement fire
+		// later and contradict it.
+		if (AfkManager.isAfk(player)) {
+			AfkManager.clear(player);
+		}
+
 		APPEARING_OFFLINE.add(player.getUUID());
 
 		broadcast(player, Component.translatable("multiplayer.player.left", player.getDisplayName()).withStyle(ChatFormatting.YELLOW));

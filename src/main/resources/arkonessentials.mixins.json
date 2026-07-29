@@ -4,6 +4,7 @@
 	"package": "com.maxazarcon.arkonessentials.mixin",
 	"mixins": [
 		"ItemStackMixin",
+		"ListPlayersCommandMixin",
 		"LivingEntityMixin",
 		"PlayerListMixin",
 		"PlayerMixin",

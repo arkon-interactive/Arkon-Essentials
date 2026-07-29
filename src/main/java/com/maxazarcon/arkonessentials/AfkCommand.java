@@ -81,6 +81,16 @@ public final class AfkCommand {
 
 	private static int toggle(final CommandSourceStack source, final @Nullable String reason) throws CommandSyntaxException {
 		ServerPlayer player = source.getPlayerOrException();
+
+		// Refused outright while appearing offline. AFK is a presence signal — the whole feature exists to
+		// tell other people where you are — and /fakeleave exists to say you are not here at all. Even with
+		// the broadcast suppressed, leaving the two able to coexist invites a leak the moment either side
+		// changes.
+		if (PresenceManager.isAppearingOffline(player)) {
+			source.sendFailure(Component.literal("You are appearing offline. Use /fakejoin first if you want to be seen."));
+			return 0;
+		}
+
 		AfkManager.toggle(player, reason);
 		return 1;
 	}

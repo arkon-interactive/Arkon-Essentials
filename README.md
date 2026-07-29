@@ -194,8 +194,36 @@ resource pack or language setting rewords is reworded here too.
 `/fakejoin` broadcasts and clears the "Offline Mode" label but **does not change your mode** — coming
 off duty stays a separate, explicit act.
 
-> `/fakeleave` does not hide you from `/list` or the server's player count. It fakes the message, not
-> the whole presence.
+**`/afk` is refused while you are appearing offline.** AFK is a presence signal and `/fakeleave` says you
+are not here — the two must not coexist. Going AFK first and then using `/fakeleave` silently clears the
+AFK state for the same reason.
+
+### What vanish actually hides
+
+Vanish works at the **entity-tracking** layer: a hidden player's entity is never sent to clients that
+should not see them, so there is nothing for a client to render, hit, or read out of its entity list.
+
+| | Hidden? |
+|---|---|
+| Seeing the player in world | yes |
+| Tab list | yes |
+| Locator bar waypoint | yes |
+| Join and leave messages | yes |
+| `/list` and its player count | yes |
+| AFK announcements | yes |
+| **Client-side minimaps** (JourneyMap, Xaero's, VoxelMap) | **yes** |
+| **Server-side web maps** (Dynmap, BlueMap, squaremap) | **no** |
+| Server ping player count and sample | no |
+| Anything they *do* — chat, block changes, container use | no |
+
+Client-side minimaps can only draw what their client was told about, and it is never told. That is
+precisely why vanish is done at the tracker rather than with an invisibility effect — an invisible
+player is still an entity the client knows about, and a radar would happily draw it.
+
+**Server-side web maps are the real exception.** Dynmap, BlueMap and squaremap read the server's player
+list directly and never go through the packets sent to clients, so nothing this mod does reaches them.
+Each has its own vanish/hidden-player API and needs explicit integration. If you run one, treat a
+vanished player as visible on the web map until that is added.
 
 ### Public
 
