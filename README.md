@@ -384,6 +384,34 @@ Note that `admin.grant.immune` sits under `admin.grant.`, so a wildcard grant of
 `arkonessentials.admin.grant.*` confers immunity along with the ability to grant. That is usually what
 you want for senior staff, but deny the child explicitly if not.
 
+### Reading the permission list programmatically
+
+The jar ships **`assets/arkonessentials/permissions.json`**, declaring every node with a label,
+category, default and type. Launchers, permission managers and setup tools can read it directly out of
+the jar — no server running, no commands, no version handshake.
+
+```json
+{
+  "schema": 1,
+  "namespace": "arkonessentials",
+  "permissions": [
+    { "node": "arkonessentials.admin.mode", "id": "arkonessentials:admin.mode",
+      "label": "Admin Mode", "category": "Modes", "type": "boolean", "default": "operator" },
+    { "node": "arkonessentials.home.limit", "id": "arkonessentials:home.limit",
+      "label": "Home Limit", "category": "Homes", "type": "integer",
+      "default": "config", "configKey": "playerHomes" }
+  ]
+}
+```
+
+`node` is the dotted form permission mods use; `id` is the namespaced identifier the mod checks —
+the same thing either way. `default` is what applies when nothing grants or denies it: `public`,
+`operator`, `config` (with `configKey` naming the setting) or `denied`. `type` is `boolean` except for
+the valued nodes, which carry a number or a flag.
+
+A build-time test compares this file against the code in both directions, so it cannot drift out of
+date — a node added without a manifest entry fails the build.
+
 ### Things that will bite you
 
 **Operator level satisfies every staff check.** This fallback has to exist — vanilla answers `false` to

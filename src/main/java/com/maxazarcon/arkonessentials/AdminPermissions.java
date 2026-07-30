@@ -119,13 +119,39 @@ public final class AdminPermissions {
 	 */
 	public static final Identifier AFK_REASON = node("afk.reason");
 
-	/** Valued nodes, each falling back to its config default when nothing grants one. */
-	public static final PermissionNode<Integer> HOME_LIMIT = PermissionNode.ofInteger(node("home.limit"));
+	/**
+	 * Valued nodes, each falling back to its config default when nothing grants one.
+	 *
+	 * <p>The identifiers are separate constants because these carry a <em>value</em> rather than a
+	 * yes/no, so they are not {@link Gate}s — and the permissions manifest still has to list them, which
+	 * needs the plain identifier.
+	 */
+	public static final Identifier HOME_LIMIT_ID = node("home.limit");
 
-	public static final PermissionNode<Integer> ADMIN_HOME_LIMIT = PermissionNode.ofInteger(node("admin.home.limit"));
+	public static final PermissionNode<Integer> HOME_LIMIT = PermissionNode.ofInteger(HOME_LIMIT_ID);
+
+	public static final Identifier ADMIN_HOME_LIMIT_ID = node("admin.home.limit");
+
+	public static final PermissionNode<Integer> ADMIN_HOME_LIMIT = PermissionNode.ofInteger(ADMIN_HOME_LIMIT_ID);
 
 	/** Grants Demigod flight where the config withholds it. God and Ghost never consult this. */
-	public static final PermissionNode<Boolean> DEMIGOD_FLIGHT = PermissionNode.of(node("fly.demigod"));
+	public static final Identifier DEMIGOD_FLIGHT_ID = node("fly.demigod");
+
+	public static final PermissionNode<Boolean> DEMIGOD_FLIGHT = PermissionNode.of(DEMIGOD_FLIGHT_ID);
+
+	/**
+	 * A node that carries a value rather than a yes/no.
+	 *
+	 * @param configKey the server setting it falls back to when nothing grants it
+	 */
+	public record Valued(Identifier node, String type, String configKey) {
+	}
+
+	public static final List<Valued> VALUED = List.of(
+		new Valued(HOME_LIMIT_ID, "integer", "playerHomes"),
+		new Valued(ADMIN_HOME_LIMIT_ID, "integer", "adminHomes"),
+		new Valued(DEMIGOD_FLIGHT_ID, "boolean", "demigodFlight")
+	);
 
 	/**
 	 * Every gate the mod checks, for diagnostics.
@@ -135,7 +161,41 @@ public final class AdminPermissions {
 	 * to operator level, and a couple take their default from the config. Getting this wrong makes the
 	 * diagnostic lie, which is worse than not having it.
 	 */
-	public record Gate(Identifier node, Predicate<PermissionContext> fallback) {
+	public record Gate(Identifier node, Default defaultKind, Predicate<PermissionContext> fallback) {
+	}
+
+	/**
+	 * What decides a node when nothing has granted or denied it.
+	 *
+	 * <p>Carried alongside the predicate rather than inferred from it, so the shipped permissions
+	 * manifest can state each node's default without anyone re-deriving it by hand — and so the test
+	 * that compares the two has something exact to compare.
+	 */
+	public enum Default {
+		/** Allowed unless revoked. */
+		PUBLIC,
+		/** Granted, or else operator level. */
+		OPERATOR,
+		/** Taken from a server config key. */
+		CONFIG,
+		/** Denied outright; only an explicit grant turns it on. */
+		DENIED
+	}
+
+	private static Gate open(final Identifier node) {
+		return new Gate(node, Default.PUBLIC, PUBLIC);
+	}
+
+	private static Gate staff(final Identifier node) {
+		return new Gate(node, Default.OPERATOR, OPERATOR);
+	}
+
+	private static Gate denied(final Identifier node) {
+		return new Gate(node, Default.DENIED, DENIED);
+	}
+
+	private static Gate configured(final Identifier node, final Predicate<PermissionContext> fallback) {
+		return new Gate(node, Default.CONFIG, fallback);
 	}
 
 	private static final Predicate<PermissionContext> PUBLIC = context -> true;
@@ -146,44 +206,44 @@ public final class AdminPermissions {
 		context -> context.permissionLevel().isEqualOrHigherThan(PermissionLevel.GAMEMASTERS);
 
 	private static final List<Gate> FIXED_GATES = List.of(
-		new Gate(TPS, PUBLIC),
-		new Gate(PING, PUBLIC),
-		new Gate(HOME, PUBLIC),
-		new Gate(HOME_NAMED, context -> EssentialsConfig.get().playerNamedHomes),
-		new Gate(AFK, PUBLIC),
-		new Gate(MODE, PUBLIC),
-		new Gate(AFK_REASON, context -> EssentialsConfig.get().afkReasonsAvailable),
-		new Gate(PASSIVE, OPERATOR),
-		new Gate(BUILD, OPERATOR),
-		new Gate(BUILD_NV, context -> EssentialsConfig.get().buildNightVisionAvailable || OPERATOR.test(context)),
-		new Gate(BUILD_REACH, OPERATOR),
-		new Gate(TP, OPERATOR),
-		new Gate(TP_OTHERS, OPERATOR),
-		new Gate(TP_COORDS, OPERATOR),
-		new Gate(TP_BACK, OPERATOR),
-		new Gate(TP_DEATH, OPERATOR),
-		new Gate(TP_TOP, OPERATOR),
-		new Gate(TP_HERE, OPERATOR),
-		new Gate(TP_THERE, OPERATOR),
-		new Gate(TP_ALL, OPERATOR),
+		open(TPS),
+		open(PING),
+		open(HOME),
+		configured(HOME_NAMED, context -> EssentialsConfig.get().playerNamedHomes),
+		open(AFK),
+		open(MODE),
+		configured(AFK_REASON, context -> EssentialsConfig.get().afkReasonsAvailable),
+		staff(PASSIVE),
+		staff(BUILD),
+		configured(BUILD_NV, context -> EssentialsConfig.get().buildNightVisionAvailable || OPERATOR.test(context)),
+		staff(BUILD_REACH),
+		staff(TP),
+		staff(TP_OTHERS),
+		staff(TP_COORDS),
+		staff(TP_BACK),
+		staff(TP_DEATH),
+		staff(TP_TOP),
+		staff(TP_HERE),
+		staff(TP_THERE),
+		staff(TP_ALL),
 		// The immunities default to false outright, matching checkStrict — an operator is NOT immune
 		// unless something granted it. Reporting these as OPERATOR here would make the diagnostic lie.
-		new Gate(TP_IMMUNE, DENIED),
-		new Gate(GRANT_IMMUNE, DENIED),
-		new Gate(AFK_TOGGLE, OPERATOR),
-		new Gate(FAKE_LEAVE, OPERATOR),
-		new Gate(FAKE_JOIN, OPERATOR),
-		new Gate(VANISH, OPERATOR),
-		new Gate(VANISH_NOCLIP, OPERATOR),
-		new Gate(GOD, OPERATOR),
-		new Gate(DEMIGOD, OPERATOR),
-		new Gate(FLY, OPERATOR),
-		new Gate(FLY_SPEED, OPERATOR),
-		new Gate(ADMIN_MODE, OPERATOR),
-		new Gate(ADMIN_GHOST, OPERATOR),
-		new Gate(ADMIN_TP, OPERATOR),
-		new Gate(ADMIN_HOME, OPERATOR),
-		new Gate(ADMIN_SEE_HIDDEN, OPERATOR)
+		denied(TP_IMMUNE),
+		denied(GRANT_IMMUNE),
+		staff(AFK_TOGGLE),
+		staff(FAKE_LEAVE),
+		staff(FAKE_JOIN),
+		staff(VANISH),
+		staff(VANISH_NOCLIP),
+		staff(GOD),
+		staff(DEMIGOD),
+		staff(FLY),
+		staff(FLY_SPEED),
+		staff(ADMIN_MODE),
+		staff(ADMIN_GHOST),
+		staff(ADMIN_TP),
+		staff(ADMIN_HOME),
+		staff(ADMIN_SEE_HIDDEN)
 	);
 
 	/**
@@ -200,7 +260,7 @@ public final class AdminPermissions {
 
 		for (AdminState state : AdminState.values()) {
 			if (state != AdminState.NONE) {
-				gates.add(new Gate(grantNode(state), OPERATOR));
+				gates.add(staff(grantNode(state)));
 			}
 		}
 

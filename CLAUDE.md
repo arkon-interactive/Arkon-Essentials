@@ -126,6 +126,28 @@ re-download it if you want to repeat this). Findings, all confirmed on a live se
   `home.named` public-by-default when it actually defaults from config, and the diagnostic
   confidently reported the opposite of the truth.
 
+### The shipped permissions manifest
+
+`assets/arkonessentials/permissions.json` declares all 46 nodes — 43 boolean gates plus the 3 valued
+ones — with a label, category, default and type. It exists so a launcher or permission manager can read
+the permission surface **straight out of the jar**: no server running, no protocol, no version
+negotiation, and nothing to keep in sync at runtime. (Before it existed, the only option was scraping
+string constants out of compiled classes, which recovers a fraction of the nodes and breaks on any
+refactor.)
+
+Its whole value is being *true*, so `PermissionsManifestTest` compares it against the code **in both
+directions**: a node in the code but not the manifest fails, and a node in the manifest but not the code
+fails too — the second catches a rename that left a stale entry, which would send an operator hunting
+for a permission that does nothing. It also asserts each declared `default` matches the gate's real
+`defaultKind`.
+
+That check is only possible because `Gate` carries **`Default`** (`PUBLIC` / `OPERATOR` / `CONFIG` /
+`DENIED`) next to its predicate, set through the `open` / `staff` / `denied` / `configured` factories
+rather than inferred. **Verified the test actually fails on drift**, not merely that it passes: removing
+a node and mislabelling another produced two failures naming both.
+
+**Adding a node means adding a manifest entry**; the build will not pass otherwise, which is the point.
+
 **`/arkon config` is operators only and has no node at all.** `mayEditConfig` is a bare level check
 that deliberately bypasses all of the above — it changes server-wide behaviour for everyone, so no
 staff grant should reach it.

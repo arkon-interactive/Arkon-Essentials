@@ -1,0 +1,382 @@
+{
+  "schema": 1,
+  "mod": "arkonessentials",
+  "namespace": "arkonessentials",
+  "notes": "Declared permission surface, for permission managers and launchers. 'node' is the dotted form permission mods use; 'id' is the namespaced identifier the mod checks. 'default' is what applies when nothing grants or denies the node: public = allowed, operator = granted or op level, config = taken from the named server setting, denied = only an explicit grant. Dotted children inherit from their parent, so granting a parent grants its children unless a child is denied explicitly.",
+  "permissions": [
+    {
+      "node": "arkonessentials.tps",
+      "id": "arkonessentials:tps",
+      "label": "Server TPS",
+      "category": "Public",
+      "type": "boolean",
+      "default": "public"
+    },
+    {
+      "node": "arkonessentials.ping",
+      "id": "arkonessentials:ping",
+      "label": "Ping",
+      "category": "Public",
+      "type": "boolean",
+      "default": "public"
+    },
+    {
+      "node": "arkonessentials.mode",
+      "id": "arkonessentials:mode",
+      "label": "Show Current Mode",
+      "category": "Public",
+      "type": "boolean",
+      "default": "public"
+    },
+    {
+      "node": "arkonessentials.home",
+      "id": "arkonessentials:home",
+      "label": "Home",
+      "category": "Homes",
+      "type": "boolean",
+      "default": "public"
+    },
+    {
+      "node": "arkonessentials.home.named",
+      "id": "arkonessentials:home.named",
+      "label": "Named Homes",
+      "category": "Homes",
+      "type": "boolean",
+      "default": "config",
+      "configKey": "playerNamedHomes"
+    },
+    {
+      "node": "arkonessentials.home.limit",
+      "id": "arkonessentials:home.limit",
+      "label": "Home Limit",
+      "category": "Homes",
+      "type": "integer",
+      "default": "config",
+      "configKey": "playerHomes"
+    },
+    {
+      "node": "arkonessentials.admin.home",
+      "id": "arkonessentials:admin.home",
+      "label": "Staff Homes",
+      "category": "Homes",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.admin.home.limit",
+      "id": "arkonessentials:admin.home.limit",
+      "label": "Staff Home Limit",
+      "category": "Homes",
+      "type": "integer",
+      "default": "config",
+      "configKey": "adminHomes"
+    },
+    {
+      "node": "arkonessentials.afk",
+      "id": "arkonessentials:afk",
+      "label": "AFK",
+      "category": "Presence",
+      "type": "boolean",
+      "default": "public"
+    },
+    {
+      "node": "arkonessentials.afk.reason",
+      "id": "arkonessentials:afk.reason",
+      "label": "AFK Reason",
+      "category": "Presence",
+      "type": "boolean",
+      "default": "config",
+      "configKey": "afkReasonsAvailable"
+    },
+    {
+      "node": "arkonessentials.afk.toggle",
+      "id": "arkonessentials:afk.toggle",
+      "label": "Toggle Auto-AFK",
+      "category": "Presence",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.fake.leave",
+      "id": "arkonessentials:fake.leave",
+      "label": "Fake Leave",
+      "category": "Presence",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.fake.join",
+      "id": "arkonessentials:fake.join",
+      "label": "Fake Join",
+      "category": "Presence",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.admin.see_hidden",
+      "id": "arkonessentials:admin.see_hidden",
+      "label": "See Vanished Players",
+      "category": "Presence",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.passive",
+      "id": "arkonessentials:passive",
+      "label": "Passive Mode",
+      "category": "Modes",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.build",
+      "id": "arkonessentials:build",
+      "label": "Build Mode",
+      "category": "Modes",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.build.nv",
+      "id": "arkonessentials:build.nv",
+      "label": "Build Night Vision",
+      "category": "Modes",
+      "type": "boolean",
+      "default": "config",
+      "configKey": "buildNightVisionAvailable"
+    },
+    {
+      "node": "arkonessentials.build.reach",
+      "id": "arkonessentials:build.reach",
+      "label": "Build Reach",
+      "category": "Modes",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.god",
+      "id": "arkonessentials:god",
+      "label": "God Mode",
+      "category": "Modes",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.demigod",
+      "id": "arkonessentials:demigod",
+      "label": "Demigod",
+      "category": "Modes",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.vanish",
+      "id": "arkonessentials:vanish",
+      "label": "Vanish",
+      "category": "Modes",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.admin.mode",
+      "id": "arkonessentials:admin.mode",
+      "label": "Admin Mode",
+      "category": "Modes",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.admin.ghost",
+      "id": "arkonessentials:admin.ghost",
+      "label": "Ghost",
+      "category": "Modes",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.fly",
+      "id": "arkonessentials:fly",
+      "label": "Flight",
+      "category": "Movement",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.fly.speed",
+      "id": "arkonessentials:fly.speed",
+      "label": "Flight Speed",
+      "category": "Movement",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.fly.demigod",
+      "id": "arkonessentials:fly.demigod",
+      "label": "Demigod Flight",
+      "category": "Movement",
+      "type": "boolean",
+      "default": "config",
+      "configKey": "demigodFlight"
+    },
+    {
+      "node": "arkonessentials.vanish.noclip",
+      "id": "arkonessentials:vanish.noclip",
+      "label": "Noclip",
+      "category": "Movement",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.tp",
+      "id": "arkonessentials:tp",
+      "label": "Teleport to Player",
+      "category": "Teleport",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.tp.others",
+      "id": "arkonessentials:tp.others",
+      "label": "Teleport Others",
+      "category": "Teleport",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.tp.coords",
+      "id": "arkonessentials:tp.coords",
+      "label": "Teleport to Coordinates",
+      "category": "Teleport",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.tp.back",
+      "id": "arkonessentials:tp.back",
+      "label": "Return",
+      "category": "Teleport",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.tp.death",
+      "id": "arkonessentials:tp.death",
+      "label": "Return to Death",
+      "category": "Teleport",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.tp.top",
+      "id": "arkonessentials:tp.top",
+      "label": "Teleport to Surface",
+      "category": "Teleport",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.tp.here",
+      "id": "arkonessentials:tp.here",
+      "label": "Summon Player",
+      "category": "Teleport",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.tp.there",
+      "id": "arkonessentials:tp.there",
+      "label": "Send Player",
+      "category": "Teleport",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.tp.all",
+      "id": "arkonessentials:tp.all",
+      "label": "Summon Everyone",
+      "category": "Teleport",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.admin.tp",
+      "id": "arkonessentials:admin.tp",
+      "label": "Staff Teleport",
+      "category": "Teleport",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.tp.immune",
+      "id": "arkonessentials:tp.immune",
+      "label": "Teleport Immunity",
+      "category": "Immunity",
+      "type": "boolean",
+      "default": "denied"
+    },
+    {
+      "node": "arkonessentials.admin.grant.immune",
+      "id": "arkonessentials:admin.grant.immune",
+      "label": "Grant Immunity",
+      "category": "Immunity",
+      "type": "boolean",
+      "default": "denied"
+    },
+    {
+      "node": "arkonessentials.admin.grant.admin",
+      "id": "arkonessentials:admin.grant.admin",
+      "label": "Grant Admin Mode",
+      "category": "Granting",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.admin.grant.passive",
+      "id": "arkonessentials:admin.grant.passive",
+      "label": "Grant Passive Mode",
+      "category": "Granting",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.admin.grant.build",
+      "id": "arkonessentials:admin.grant.build",
+      "label": "Grant Build Mode",
+      "category": "Granting",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.admin.grant.god",
+      "id": "arkonessentials:admin.grant.god",
+      "label": "Grant God Mode",
+      "category": "Granting",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.admin.grant.demigod",
+      "id": "arkonessentials:admin.grant.demigod",
+      "label": "Grant Demigod",
+      "category": "Granting",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.admin.grant.ghost",
+      "id": "arkonessentials:admin.grant.ghost",
+      "label": "Grant Ghost",
+      "category": "Granting",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.admin.grant.vanish",
+      "id": "arkonessentials:admin.grant.vanish",
+      "label": "Grant Vanish",
+      "category": "Granting",
+      "type": "boolean",
+      "default": "operator"
+    }
+  ]
+}
