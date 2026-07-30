@@ -697,6 +697,10 @@ public final class AdminManager {
 
 		syncTo(player);
 
+		// State persists across logout, so someone rejoining while vanished must be taken off the web map
+		// again — the map only learns about them from us, and it has just seen them come online.
+		WebMapIntegration.refresh(player);
+
 		// The setGameModeForPlayer mixin already restored the flag values during construction, but that
 		// ran before the connection existed — so the fields are right and it is only the client that has
 		// not been told. Force one abilities packet to be certain.
@@ -735,6 +739,10 @@ public final class AdminManager {
 		if (server == null) {
 			return;
 		}
+
+		// Web maps read the player list directly rather than the packets below, so they need telling
+		// separately — this is the one leak the tracker-level vanish cannot close on its own.
+		WebMapIntegration.refresh(player);
 
 		// The locator bar would otherwise keep broadcasting a hidden player's position, which defeats the
 		// point of hiding the entity. Note this drops the marker for everyone, ops included — they can

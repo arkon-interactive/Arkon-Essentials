@@ -54,6 +54,10 @@ public final class PresenceManager {
 
 		APPEARING_OFFLINE.add(player.getUUID());
 
+		// After the flag goes up, so the refresh sees the player as concealed. Needed even when the state
+		// is NONE and refreshVisibility never fires — /fakeleave alone must take them off the map.
+		WebMapIntegration.refresh(player);
+
 		broadcast(player, Component.translatable("multiplayer.player.left", player.getDisplayName()).withStyle(ChatFormatting.YELLOW));
 		AdminManager.syncTo(player);
 	}
@@ -67,6 +71,7 @@ public final class PresenceManager {
 	 */
 	public static void fakeJoin(final ServerPlayer player) {
 		APPEARING_OFFLINE.remove(player.getUUID());
+		WebMapIntegration.refresh(player);
 
 		broadcast(player, Component.translatable("multiplayer.player.joined", player.getDisplayName()).withStyle(ChatFormatting.YELLOW));
 		AdminManager.syncTo(player);

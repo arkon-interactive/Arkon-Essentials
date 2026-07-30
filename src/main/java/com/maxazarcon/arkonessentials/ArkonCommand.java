@@ -196,6 +196,11 @@ public final class ArkonCommand {
 			// refresh rather than apply: a config edit can revoke flight (demigodFlight going false),
 			// not only grant it.
 			AdminManager.refreshFlight(player);
+
+			// hideFromWebMaps can be turned off as well as on, and turning it off has to put concealed
+			// players back on the map rather than merely stop hiding new ones.
+			WebMapIntegration.refresh(player);
+
 			server.getCommands().sendCommands(player);
 		}
 	}

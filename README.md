@@ -212,18 +212,34 @@ should not see them, so there is nothing for a client to render, hit, or read ou
 | `/list` and its player count | yes |
 | AFK announcements | yes |
 | **Client-side minimaps** (JourneyMap, Xaero's, VoxelMap) | **yes** |
-| **Server-side web maps** (Dynmap, BlueMap, squaremap) | **no** |
-| Server ping player count and sample | no |
+| **BlueMap** and **squaremap** | **yes**, via their APIs |
+| Server-list ping count and name sample | yes |
+| **Dynmap** | **no** — see below |
 | Anything they *do* — chat, block changes, container use | no |
 
 Client-side minimaps can only draw what their client was told about, and it is never told. That is
 precisely why vanish is done at the tracker rather than with an invisibility effect — an invisible
 player is still an entity the client knows about, and a radar would happily draw it.
 
-**Server-side web maps are the real exception.** Dynmap, BlueMap and squaremap read the server's player
-list directly and never go through the packets sent to clients, so nothing this mod does reaches them.
-Each has its own vanish/hidden-player API and needs explicit integration. If you run one, treat a
-vanished player as visible on the web map until that is added.
+Web maps are the exception that needs explicit work: they read the server's player list directly and
+never touch the packets sent to clients. BlueMap and squaremap are handled through their own APIs, as
+soft dependencies — if neither is installed, nothing is loaded and nothing changes.
+
+> **Dynmap is not covered.** It has no Fabric build for Minecraft 26.2, so there is nothing to test
+> against; an untested integration would be worse than a documented gap. If you run Dynmap, treat
+> vanished players as visible on it.
+
+Two switches, both on by default:
+
+| Key | Effect when off |
+|---|---|
+| `hideFromPing` | The server-list count and sample stay truthful, so vanished staff are counted |
+| `hideFromWebMaps` | Vanished players stay visible on BlueMap and squaremap |
+
+`hideFromPing` matters more than it looks: the ping is readable by anyone who can reach the port,
+without logging in, so a count that drops when staff go on duty is a tell that needs no game client at
+all. Turn it off only if something downstream — a queue plugin, a server list tracking population —
+needs the true number.
 
 ### Public
 
@@ -390,6 +406,8 @@ relog. `/arkon reload` re-reads a file you edited by hand.
 | `afkReturnMessage` | `%s is no longer AFK.` | Returning announcement. |
 | `afkReasonsAvailable` | `true` | When false, `/afk <reason>` needs `afk.reason`. |
 | `fakeLeaveDefaultMode` | `ghost` | Mode `/fakeleave` uses when none is named. |
+| `hideFromPing` | `true` | Leave vanished players out of the server-list ping count and sample. |
+| `hideFromWebMaps` | `true` | Hide vanished players on BlueMap and squaremap, when installed. |
 
 **The defaults are live.** Per-player preferences (reach, fly speed, night vision) are stored as
 *absent-until-set*, so changing a default here moves every player who never chose their own.

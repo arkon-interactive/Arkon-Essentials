@@ -101,6 +101,24 @@ public final class EssentialsConfig {
 	 */
 	public String fakeLeaveDefaultMode = "ghost";
 
+	/**
+	 * Whether vanished players are left out of the server-list ping — both the online count and the
+	 * sample of names.
+	 *
+	 * <p>On by default, since a count that drops when staff go on duty is exactly the tell vanish exists
+	 * to remove. Turn it off if you would rather the public count stayed truthful, for a queue plugin or
+	 * a server list that tracks population.
+	 */
+	public boolean hideFromPing = true;
+
+	/**
+	 * Whether vanished players are hidden on BlueMap and squaremap.
+	 *
+	 * <p>Only takes effect when one of those is installed. Turn it off if you want staff visible to
+	 * whoever can see the web map — it is often a private admin map rather than a public one.
+	 */
+	public boolean hideFromWebMaps = true;
+
 	/** The configured {@code /fakeleave} state, resolved and validated. */
 	public AdminState fakeLeaveMode() {
 		for (AdminState state : AdminState.values()) {
@@ -145,7 +163,11 @@ public final class EssentialsConfig {
 		Option.ofBool("afkReasonsAvailable", c -> c.afkReasonsAvailable, (c, v) -> c.afkReasonsAvailable = v,
 			"When false, /afk <reason> requires the arkonessentials:afk.reason permission."),
 		Option.ofString("fakeLeaveDefaultMode", c -> c.fakeLeaveDefaultMode, (c, v) -> c.fakeLeaveDefaultMode = v,
-			"State /fakeleave uses when none is named. Any state, including none. Unknown values fall back to ghost.")
+			"State /fakeleave uses when none is named. Any state, including none. Unknown values fall back to ghost."),
+		Option.ofBool("hideFromPing", c -> c.hideFromPing, (c, v) -> c.hideFromPing = v,
+			"Whether vanished players are left out of the server-list ping count and sample."),
+		Option.ofBool("hideFromWebMaps", c -> c.hideFromWebMaps, (c, v) -> c.hideFromWebMaps = v,
+			"Whether vanished players are hidden on BlueMap and squaremap, when installed.")
 	);
 
 	public static EssentialsConfig get() {

@@ -6,6 +6,7 @@
 		"ItemStackMixin",
 		"ListPlayersCommandMixin",
 		"LivingEntityMixin",
+		"MinecraftServerMixin",
 		"PlayerListMixin",
 		"PlayerMixin",
 		"ServerGamePacketListenerImplMixin",

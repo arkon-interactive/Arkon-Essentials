@@ -647,6 +647,7 @@ The five mixins each cover one leak:
 | `LivingEntityMixin` | `canBeSeenByAnyone()` → false. Single chokepoint for mob targeting: `TargetingConditions#test` checks it first and `canBeSeenAsEnemy` delegates to it. |
 | `TrackedEntityMixin` | Cancels `updatePlayer` so the entity is never sent to disallowed clients. This is what vanish actually *is*. |
 | `ListPlayersCommandMixin` | Filters `/list` — redirects `getPlayers()` inside `format`, the single source of both the names and the count |
+| `MinecraftServerMixin` | Filters the server-list ping — redirects `getPlayers()` inside `buildPlayerStatus`, feeding both the count and the sample |
 | `PlayerListMixin` | Suppresses the join message |
 | `ServerGamePacketListenerImplMixin` | Suppresses the leave message |
 | `ServerPlayerMixin` | Records `lastNonCreativeMode` on every `setGameMode` |
@@ -659,12 +660,37 @@ calling `ServerWaypointManager.track/untrackWaypoint`.
 
 **What vanish does and does not reach.** Because it works at the tracker, a client is never told the
 player exists — so **client-side minimaps (JourneyMap, Xaero's, VoxelMap) show nothing**, which an
-invisibility effect would not achieve (an invisible entity is still an entity the radar can draw). The
-gap is **server-side web maps (Dynmap, BlueMap, squaremap)**: they read `PlayerList` directly and never
-touch the client packet path, so they need each mod's own vanish API and are currently unhandled. The
-**server ping count and sample** are likewise unfiltered — `MinecraftServer` builds them straight from
-`players.size()`. Anything the player *does* (chat, block changes, container use) is also still visible;
-vanish hides presence, not actions.
+invisibility effect would not achieve (an invisible entity is still an entity the radar can draw).
+Anything the player *does* (chat, block changes, container use) is still visible; vanish hides presence,
+not actions.
+
+**Web maps and the ping read `PlayerList` directly** and never touch the client packet path, so each
+needed closing separately:
+
+- `MinecraftServerMixin` redirects the single `getPlayers()` call in `buildPlayerStatus`, which feeds
+  both the ping count *and* the name sample — filtering one and not the other would leave them
+  contradicting each other. Gated on `hideFromPing`.
+- `WebMapIntegration` handles **BlueMap** (`BlueMapAPI.getInstance().getWebApp().setPlayerVisibility`)
+  and **squaremap** (`SquaremapProvider.get().playerManager().hidden(uuid, hidden)` — note its API is
+  inverted relative to everything else here). Gated on `hideFromWebMaps`.
+
+Both API artifacts are `compileOnly` (`de.bluecolored.bluemap:BlueMapAPI`, `xyz.jpenilla:squaremap-api`)
+and every call sits behind `FabricLoader.isModLoaded`, so a server without them never loads the classes.
+`refresh` **computes** visibility rather than being told it, so a caller cannot get the direction wrong,
+and turning `hideFromWebMaps` off *restores* visibility rather than merely ceasing to hide — otherwise a
+player hidden before the edit would be stuck on the map.
+
+Call it from anywhere concealment can change: `refreshVisibility`, `PresenceManager.fakeLeave/fakeJoin`
+(needed on its own, since `/fakeleave none` never triggers `refreshVisibility`), `onJoin`, and
+`ArkonCommand.applyToOnlinePlayers`.
+
+**Dynmap is deliberately absent** — no Fabric build for 26.2, so there is nothing to test against.
+
+**Verified** on the dev server with BlueMap 5.22 and squaremap 1.3.15 in `run/mods/`: both detected at
+startup, both mixins applied, no injection errors, squaremap's `/tiles/players.json` live, and the status
+ping still answers (`scratchpad/ping.py` is a minimal status-ping client — status only, so it needs no
+login). **The filtering itself is unproven**: with nobody online there is no vanished player to omit, so
+that last step needs a real client.
 
 **`/afk` is refused while appearing offline**, and `/fakeleave` silently clears an existing AFK via
 `AfkManager.clear` (no announcement). `AfkManager.announce` additionally suppresses for

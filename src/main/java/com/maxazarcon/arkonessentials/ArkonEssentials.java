@@ -41,6 +41,8 @@ public class ArkonEssentials implements ModInitializer {
 		// Before anything reads a default from it.
 		EssentialsConfig.load();
 
+		WebMapIntegration.logStatus();
+
 		PayloadTypeRegistry.clientboundPlay().register(AdminStatePayload.TYPE, AdminStatePayload.STREAM_CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(HandshakePayload.TYPE, HandshakePayload.STREAM_CODEC);
 
