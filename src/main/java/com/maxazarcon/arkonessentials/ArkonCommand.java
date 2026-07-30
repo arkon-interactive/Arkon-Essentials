@@ -3,6 +3,7 @@ package com.maxazarcon.arkonessentials;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -48,6 +49,7 @@ public final class ArkonCommand {
 				.requires(AdminPermissions::mayEditConfig)
 				.then(config)
 				.then(Commands.literal("reload").executes(context -> reload(context.getSource())))
+				.then(Commands.literal("ping").executes(context -> pingReport(context.getSource())))
 				.then(
 					Commands.literal("perms")
 						.then(
@@ -111,6 +113,58 @@ public final class ArkonCommand {
 		}
 
 		return 0;
+	}
+
+	/**
+	 * {@code /arkon ping} — every player's latency, as one line of JSON.
+	 *
+	 * <p>For launchers and monitoring rather than for reading: vanilla surfaces per-player latency
+	 * nowhere a tool can reach it — {@code /list} gives names only and there is no vanilla ping command —
+	 * even though the server has tracked it all along for the tab list.
+	 *
+	 * <p>Deliberately <strong>one line</strong>, and built by hand rather than through a JSON library, so
+	 * that what arrives over RCON is exactly one parseable string. Sending several {@code sendSuccess}
+	 * calls would have RCON concatenate them into something a parser has to split first.
+	 *
+	 * <p>Vanished players are included, flagged rather than omitted. This is an operator-only command on
+	 * the operator's own server: silently under-reporting would make it useless for monitoring, and the
+	 * flag lets the caller decide.
+	 */
+	private static int pingReport(final CommandSourceStack source) {
+		MinecraftServer server = source.getServer();
+		List<ServerPlayer> players = server.getPlayerList().getPlayers();
+		StringBuilder json = new StringBuilder("{\"schema\":1,\"players\":[");
+
+		for (int i = 0; i < players.size(); i++) {
+			ServerPlayer player = players.get(i);
+
+			if (i > 0) {
+				json.append(',');
+			}
+
+			json.append("{\"name\":\"").append(escape(player.getGameProfile().name()))
+				.append("\",\"uuid\":\"").append(player.getUUID())
+				.append("\",\"ping\":").append(player.connection.latency())
+				.append(",\"hidden\":").append(AdminManager.getState(player).hiddenFromPlayers()
+					|| PresenceManager.isAppearingOffline(player))
+				.append('}');
+		}
+
+		json.append("]}");
+
+		String line = json.toString();
+		source.sendSuccess(() -> Component.literal(line), false);
+		return players.size();
+	}
+
+	/**
+	 * Minimal JSON string escaping.
+	 *
+	 * <p>Only quote and backslash can realistically appear in a Minecraft name, but escaping nothing
+	 * would let one malformed name break the whole document for the caller.
+	 */
+	private static String escape(final String value) {
+		return value.replace("\\", "\\\\").replace("\"", "\\\"");
 	}
 
 	private static void report(final CommandSourceStack source, final String name, final PermissionContext context) {

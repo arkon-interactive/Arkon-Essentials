@@ -190,6 +190,31 @@ changeable via `/tick rate`) and sleeps out the remainder, so the naive formula 
 idle server. The correct value is `min(target, 1e9 / getAverageTickTimeNanos())` — which is also how
 vanilla decides "lagging". Read the target from the manager; never hardcode 20.
 
+### `/ping` — per-player latency
+
+**`/ping` used to report no number on purpose**, reasoning that a meaningful one needed a client-side
+timestamp. That was wrong, and the note is superseded: the server already measures the round trip of its
+own keep-alive packets per connection — that is what draws the tab list's ping bars — and exposes it as
+`player.connection.latency()` on `ServerCommonPacketListenerImpl`. No client mod involved.
+
+Two properties of the number, both from vanilla's own maintenance of it, and both worth stating to
+anyone consuming it:
+
+- **Smoothed**: `latency = (latency * 3 + sample) / 4`, so it leans on history rather than jumping.
+- **Keep-alive cadence** (~15s), so it is a recent average, not a live probe. Running it twice in a row
+  usually returns the same value.
+
+Latency is **not privileged** — it is already in the player-list packet every client receives. Exposing
+it changes what is reachable, not what is known, which is why `/ping <player>` stays on the public `ping`
+node. It does refuse for players the caller cannot see, using vanilla's own "no player found" wording so
+that asking cannot confirm a vanished player is online.
+
+**`/arkon ping` emits one line of JSON** for tooling, since vanilla surfaces latency nowhere a launcher
+can reach — `/list` is names only and there is no vanilla ping command. One line matters: RCON
+concatenates multiple `sendSuccess` calls, so several would arrive as one unsplittable string. Vanished
+players are included with a `hidden` flag rather than omitted — it is an operator-only command on the
+operator's own server, and silently under-reporting would make it useless for monitoring.
+
 ### Config (`config/arkonessentials.json`)
 
 `EssentialsConfig` is a plain Gson-mapped class with initialised fields, **not** a record — Gson leaves

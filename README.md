@@ -281,13 +281,20 @@ needs the true number.
 | `/mode` | Your current mode, what it does, and any active flags |
 | `/mode <name>` | Describe any mode without entering it |
 | `/tps` | Current ticks per second and MSPT |
-| `/ping` | Replies "Pong!" — proves the connection is alive |
+| `/ping` | Your latency to the server |
+| `/ping <player>` | Someone else's latency |
 
 `/mode` is there for players without the client jar, who get no indicator, and for anyone who cannot
 remember which mode stops mobs and which stops damage. It also reports flags that sit alongside the mode
 — flight, AFK, appearing offline — and, in Build Mode, your current reach and night-vision settings.
 
 `/tps` exists because vanilla's `/tick query` sits behind op 3, so players cannot use it.
+
+**About the ping number.** It is the server's own keep-alive round trip — the same figure behind the tab
+list's ping bars — so it works for vanilla clients with nothing installed. It is **smoothed** and sampled
+roughly every 15 seconds, so treat it as a recent average rather than a live probe; running it twice in a
+row will usually give the same answer. Asking about a player you cannot see is refused as though they
+were not online, so it cannot be used to detect vanished staff.
 
 ### Administration
 
@@ -298,6 +305,7 @@ remember which mode stops mobs and which stops damage. It also reports flags tha
 | `/arkon config <key> <value>` | Change a setting, applying immediately |
 | `/arkon reload` | Re-read a hand-edited config file |
 | `/arkon perms <player\|uuid>` | Show how every permission resolves for someone |
+| `/arkon ping` | Every player's latency, as one line of JSON |
 
 **`/arkon` is operators only and has no permission node.** It changes server-wide behaviour for
 everyone, so no staff grant reaches it.
@@ -411,6 +419,20 @@ the valued nodes, which carry a number or a flag.
 
 A build-time test compares this file against the code in both directions, so it cannot drift out of
 date — a node added without a manifest entry fails the build.
+
+### Reading player latency programmatically
+
+`/arkon ping` returns a single line of JSON, so a launcher or monitor can read it over RCON without
+parsing chat:
+
+```json
+{"schema":1,"players":[{"name":"Steve","uuid":"…","ping":42,"hidden":false}]}
+```
+
+Deliberately one line — RCON concatenates a command's output, so several lines would arrive as one
+string a parser has to split first. Vanished players are included with `hidden: true` rather than left
+out, since this is an operator command on your own server and quietly under-reporting would make it
+useless for monitoring.
 
 ### Things that will bite you
 
