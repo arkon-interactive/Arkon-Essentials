@@ -189,7 +189,7 @@ public final class ArkonCommand {
 	 */
 	private static void applyToOnlinePlayers(final MinecraftServer server) {
 		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-			if (AdminManager.getState(player) == AdminState.BUILD) {
+			if (AdminManager.getState(player).grantsNightVision()) {
 				AdminManager.applyBuildPerks(player);
 			}
 

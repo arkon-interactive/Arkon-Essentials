@@ -113,6 +113,10 @@ class EssentialsDataTest {
 		// Defaults true, so false is the only value that proves it round-tripped rather than being
 		// reconstructed from the codec default.
 		data.setAfkEnabled(id, false);
+		// Two adjacent booleans with the same default, so give them opposite values — transposing them
+		// would otherwise round-trip cleanly and the swap would only show up in game.
+		data.setVanishPickups(id, true);
+		data.setVanishInteract(id, false);
 
 		EssentialsData decoded = decode(encode(data));
 
@@ -123,6 +127,8 @@ class EssentialsDataTest {
 		assertEquals(3, decoded.getFlySpeed(id));
 		assertFalse(decoded.getBuildNightVision(id));
 		assertFalse(decoded.getAfkEnabled(id));
+		assertTrue(decoded.getVanishPickups(id));
+		assertFalse(decoded.getVanishInteract(id));
 
 		InventorySnapshot survival = decoded.takeSurvivalInventory(id).orElseThrow();
 		assertEquals(3, survival.items().size());

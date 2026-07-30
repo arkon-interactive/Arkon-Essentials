@@ -40,11 +40,31 @@ Six mutually exclusive states. Only one is active at a time, which is why the HU
 | **God** | `/godmode` | — | — | untouched | untouched |
 | **Demigod** | `/demigod` | — | — | untouched | untouched |
 | **Ghost** | `/ghost` | yes | yes | untouched | untouched |
+| **Vanish** | `/vanish` | yes | yes | untouched | admin loadout |
 
 **God vs Demigod.** God refuses the hit outright — no damage, no knockback, no harmful effects.
 Demigod lets the whole damage pipeline run, so you still see the hurt animation, knockback and
 particles, and only the health loss is refused. Both pin health and hunger full and spare carried gear
 from durability loss.
+
+**Vanish** is for watching without leaving a trace. Invisible, ignored by mobs, fully protected, and —
+unlike every other mode — it **refuses to touch the world**: no item pickups, no breaking, placing,
+attacking, or using. It stays in survival but swaps to the admin loadout, and includes night vision and
+flight. Effects are refused outright, including catching fire, so there is no flame overlay giving you a
+lit screen while you sit still.
+
+| Command | Effect |
+|---|---|
+| `/vanish` | Toggle |
+| `/vanish pickups` or `/vanish p` | Allow or refuse picking items up |
+| `/vanish interact` or `/vanish i` | Allow or refuse world interaction |
+
+Both modifiers are off by default and persist per player, so you can flip them mid-session without
+leaving the mode.
+
+> **Doors, trapdoors and fence gates always work**, even with interaction refused — a mode for moving
+> quietly through a building that cannot open a door is not much use. Note the door still swings and
+> still makes a sound for everyone nearby: this exempts the interaction, it does not hide it.
 
 **Ghost** is invisible God Mode that leaves you in survival. Unseen and untouchable, still holding your
 own gear, with flight available — your game mode and inventory are never touched. That combination is
@@ -78,6 +98,8 @@ staff never restock.
 | `/admin god` | `/godmode`, `/tgm` | Toggle God Mode |
 | `/admin demigod` | `/demigod`, `/dg`, `/tdg` | Toggle Demigod |
 | `/admin ghost` | `/ghost` | Toggle Ghost |
+| `/vanish` | | Toggle Vanish — see above |
+| `/nv` | | Toggle night vision (same setting as `/build nv`) |
 | `/build nv` | | Toggle Build Mode night vision (persists) |
 | `/build reach <0–10>` | | Set your Build Mode reach bonus (persists) |
 
@@ -311,6 +333,7 @@ Nodes are `arkonessentials:<node>`, which permission mods usually write dotted:
 | `build.reach` | `/build reach` |
 | `god` | God Mode |
 | `demigod` | Demigod |
+| `vanish` | Vanish, and its two modifiers |
 | `fly` | `/fly` |
 | `fly.speed` | `/fly speed` |
 | `tp` | `/tp <player>` |

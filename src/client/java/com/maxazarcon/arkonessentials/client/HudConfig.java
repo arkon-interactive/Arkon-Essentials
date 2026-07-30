@@ -77,6 +77,7 @@ public final class HudConfig {
 	public Indicator god = new Indicator(true);
 	public Indicator demigod = new Indicator(true);
 	public Indicator ghost = new Indicator(true);
+	public Indicator vanish = new Indicator(true);
 	public Indicator flight = new Indicator(true);
 	public Indicator afk = new Indicator(true);
 	public Indicator offline = new Indicator(true);
@@ -194,6 +195,7 @@ public final class HudConfig {
 			new Slot("god", this.god, AdminState.GOD.color()),
 			new Slot("demigod", this.demigod, AdminState.DEMIGOD.color()),
 			new Slot("ghost", this.ghost, AdminState.GHOST.color()),
+			new Slot("vanish", this.vanish, AdminState.VANISH.color()),
 			new Slot("flight", this.flight, FLIGHT_COLOR),
 			new Slot("afk", this.afk, AFK_COLOR),
 			new Slot("offline", this.offline, OFFLINE_COLOR)
@@ -209,6 +211,7 @@ public final class HudConfig {
 			case GOD -> this.god;
 			case DEMIGOD -> this.demigod;
 			case GHOST -> this.ghost;
+			case VANISH -> this.vanish;
 		};
 	}
 
@@ -285,6 +288,7 @@ public final class HudConfig {
 		this.god = orNew(this.god);
 		this.demigod = orNew(this.demigod);
 		this.ghost = orNew(this.ghost);
+		this.vanish = orNew(this.vanish);
 		this.flight = orNew(this.flight);
 		this.afk = orNew(this.afk);
 		this.offline = orNew(this.offline);

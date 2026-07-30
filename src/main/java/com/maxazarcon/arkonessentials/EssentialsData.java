@@ -368,6 +368,24 @@ public class EssentialsData extends SavedData {
 		put(entry(playerId).withAfkEnabled(enabled));
 	}
 
+	/** Whether this player has opted back into picking items up while vanished. Off by default. */
+	public boolean getVanishPickups(final UUID playerId) {
+		return entry(playerId).vanishPickups();
+	}
+
+	public void setVanishPickups(final UUID playerId, final boolean allowed) {
+		put(entry(playerId).withVanishPickups(allowed));
+	}
+
+	/** Whether this player has opted back into world interaction while vanished. Off by default. */
+	public boolean getVanishInteract(final UUID playerId) {
+		return entry(playerId).vanishInteract();
+	}
+
+	public void setVanishInteract(final UUID playerId, final boolean allowed) {
+		put(entry(playerId).withVanishInteract(allowed));
+	}
+
 	/** Extra blocks of reach in Build Mode, falling back to the configured default. */
 	public int getReachBonus(final UUID playerId) {
 		return entry(playerId).reachBonus().orElseGet(() -> EssentialsConfig.get().defaultBuildReach);
@@ -493,9 +511,12 @@ public class EssentialsData extends SavedData {
 		boolean flyEnabled,
 		Optional<Integer> flySpeed,
 		Optional<Boolean> buildNightVision,
-		boolean afkEnabled
+		boolean afkEnabled,
+		boolean vanishPickups,
+		boolean vanishInteract
 	) {
-		static final Preferences DEFAULT = new Preferences(Optional.empty(), false, Optional.empty(), Optional.empty(), true);
+		static final Preferences DEFAULT =
+			new Preferences(Optional.empty(), false, Optional.empty(), Optional.empty(), true, false, false);
 
 		static final MapCodec<Preferences> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
 			Codec.intRange(0, AdminManager.MAX_REACH_BONUS).optionalFieldOf("reach_bonus").forGetter(Preferences::reachBonus),
@@ -504,7 +525,10 @@ public class EssentialsData extends SavedData {
 				.optionalFieldOf("fly_speed")
 				.forGetter(Preferences::flySpeed),
 			Codec.BOOL.optionalFieldOf("build_night_vision").forGetter(Preferences::buildNightVision),
-			Codec.BOOL.optionalFieldOf("afk_enabled", true).forGetter(Preferences::afkEnabled)
+			Codec.BOOL.optionalFieldOf("afk_enabled", true).forGetter(Preferences::afkEnabled),
+			// Both default false, meaning blocked: Vanish is meant to leave no trace unless you ask it to.
+			Codec.BOOL.optionalFieldOf("vanish_pickups", false).forGetter(Preferences::vanishPickups),
+			Codec.BOOL.optionalFieldOf("vanish_interact", false).forGetter(Preferences::vanishInteract)
 		).apply(instance, Preferences::new));
 
 		boolean isDefault() {
@@ -733,27 +757,51 @@ public class EssentialsData extends SavedData {
 
 		Entry withReachBonus(final Optional<Integer> bonus) {
 			Preferences p = this.preferences;
-			return this.withPreferences(new Preferences(bonus, p.flyEnabled(), p.flySpeed(), p.buildNightVision(), p.afkEnabled()));
+			return this.withPreferences(new Preferences(bonus, p.flyEnabled(), p.flySpeed(), p.buildNightVision(), p.afkEnabled(), p.vanishPickups(), p.vanishInteract()));
 		}
 
 		Entry withFlyEnabled(final boolean enabled) {
 			Preferences p = this.preferences;
-			return this.withPreferences(new Preferences(p.reachBonus(), enabled, p.flySpeed(), p.buildNightVision(), p.afkEnabled()));
+			return this.withPreferences(new Preferences(p.reachBonus(), enabled, p.flySpeed(), p.buildNightVision(), p.afkEnabled(), p.vanishPickups(), p.vanishInteract()));
 		}
 
 		Entry withFlySpeed(final Optional<Integer> multiplier) {
 			Preferences p = this.preferences;
-			return this.withPreferences(new Preferences(p.reachBonus(), p.flyEnabled(), multiplier, p.buildNightVision(), p.afkEnabled()));
+			return this.withPreferences(new Preferences(p.reachBonus(), p.flyEnabled(), multiplier, p.buildNightVision(), p.afkEnabled(), p.vanishPickups(), p.vanishInteract()));
 		}
 
 		Entry withBuildNightVision(final Optional<Boolean> enabled) {
 			Preferences p = this.preferences;
-			return this.withPreferences(new Preferences(p.reachBonus(), p.flyEnabled(), p.flySpeed(), enabled, p.afkEnabled()));
+			return this.withPreferences(new Preferences(p.reachBonus(), p.flyEnabled(), p.flySpeed(), enabled, p.afkEnabled(), p.vanishPickups(), p.vanishInteract()));
 		}
 
 		Entry withAfkEnabled(final boolean enabled) {
 			Preferences p = this.preferences;
-			return this.withPreferences(new Preferences(p.reachBonus(), p.flyEnabled(), p.flySpeed(), p.buildNightVision(), enabled));
+			return this.withPreferences(new Preferences(
+				p.reachBonus(), p.flyEnabled(), p.flySpeed(), p.buildNightVision(), enabled, p.vanishPickups(), p.vanishInteract()
+			));
+		}
+
+		Entry withVanishPickups(final boolean allowed) {
+			Preferences p = this.preferences;
+			return this.withPreferences(new Preferences(
+				p.reachBonus(), p.flyEnabled(), p.flySpeed(), p.buildNightVision(), p.afkEnabled(), allowed, p.vanishInteract()
+			));
+		}
+
+		Entry withVanishInteract(final boolean allowed) {
+			Preferences p = this.preferences;
+			return this.withPreferences(new Preferences(
+				p.reachBonus(), p.flyEnabled(), p.flySpeed(), p.buildNightVision(), p.afkEnabled(), p.vanishPickups(), allowed
+			));
+		}
+
+		boolean vanishPickups() {
+			return this.preferences.vanishPickups();
+		}
+
+		boolean vanishInteract() {
+			return this.preferences.vanishInteract();
 		}
 	}
 }

@@ -116,6 +116,43 @@ public final class AdminManager {
 		return getState(player).protectsPlayer() || AfkManager.isAfk(player);
 	}
 
+	/**
+	 * Whether this player may pick items up.
+	 *
+	 * <p>The state sets the default and the player may override it, which is why this is not simply a
+	 * predicate on {@link AdminState}: {@code /vanish pickups} exists precisely so an admin can collect
+	 * evidence without leaving vanish.
+	 */
+	public static boolean pickupsBlocked(final ServerPlayer player) {
+		if (!getState(player).blocksPickupsByDefault()) {
+			return false;
+		}
+
+		MinecraftServer server = player.level().getServer();
+		return server != null && !EssentialsData.get(server).getVanishPickups(player.getUUID());
+	}
+
+	/** Whether this player may break, place, attack, or use blocks and entities. */
+	public static boolean interactionBlocked(final ServerPlayer player) {
+		if (!getState(player).blocksInteractionByDefault()) {
+			return false;
+		}
+
+		MinecraftServer server = player.level().getServer();
+		return server != null && !EssentialsData.get(server).getVanishInteract(player.getUUID());
+	}
+
+	/**
+	 * Whether this player should catch fire at all.
+	 *
+	 * <p>Separate from damage immunity: a protected player takes no burn damage either way, but the
+	 * flames still render — and to the person on fire that is a screen full of orange, which rather
+	 * defeats sitting quietly and watching.
+	 */
+	public static boolean fireSuppressed(final ServerPlayer player) {
+		return getState(player).blocksDamageEntirely();
+	}
+
 	public static void setState(final ServerPlayer player, final AdminState next) {
 		MinecraftServer server = player.level().getServer();
 
@@ -131,39 +168,47 @@ public final class AdminManager {
 			return;
 		}
 
-		boolean leavingCreative = current.stashesInventory();
-		boolean enteringCreative = next.stashesInventory();
+		boolean leavingLoadout = current.stashesInventory();
+		boolean enteringLoadout = next.stashesInventory();
 		// Judged against the outgoing state, before anything below mutates abilities.
 		boolean hadFlight = data.getFlyEnabled(id) && stateGrantsFlight(player, current);
 
 		// Whatever the player is holding belongs to the state they are leaving, so it goes back into
-		// that state's loadout rather than a single shared one.
-		if (leavingCreative) {
-			data.putLoadout(id, current, InventorySnapshot.capture(player));
+		// that state's loadout rather than a single shared one. loadoutKey, not the state itself:
+		// Vanish deliberately shares Admin's slot.
+		if (leavingLoadout) {
+			data.putLoadout(id, current.loadoutKey(), InventorySnapshot.capture(player));
 		}
 
-		// Their own gear is stashed only on the way in from a non-creative state. Switching directly
-		// between Admin and Build must leave it alone, or the second swap would overwrite it with a
-		// creative loadout.
-		if (enteringCreative && !leavingCreative) {
-			data.setLastNonCreativeMode(id, player.gameMode());
+		// Their own gear is stashed only on the way in from a state that was not already using a
+		// loadout. Switching directly between two loadout states must leave it alone, or the second
+		// swap would overwrite the survival stash with a loadout.
+		if (enteringLoadout && !leavingLoadout) {
 			data.putSurvivalInventory(id, InventorySnapshot.capture(player));
 		}
 
-		if (enteringCreative) {
+		// Game mode is decided independently of the inventory. Vanish is the reason: it takes a loadout
+		// while staying in survival, which the old single test could not express. Recording the outgoing
+		// mode belongs here too — it must be captured before creative replaces it, and only then.
+		if (next.forcesCreative() && !current.forcesCreative()) {
+			data.setLastNonCreativeMode(id, player.gameMode());
 			player.setGameMode(GameType.CREATIVE);
-			restoreOrClear(player, data.getLoadout(id, next));
-		} else if (leavingCreative) {
+		} else if (!next.forcesCreative() && current.forcesCreative()) {
 			player.setGameMode(data.getLastNonCreativeMode(id));
+		}
+
+		if (enteringLoadout) {
+			restoreOrClear(player, data.getLoadout(id, next.loadoutKey()));
+		} else if (leavingLoadout) {
 			restoreOrClear(player, data.takeSurvivalInventory(id));
 		}
 
-		if (current == AdminState.BUILD) {
+		if (current.grantsNightVision()) {
 			clearBuildPerks(player);
 		}
 
-		if (next == AdminState.BUILD) {
-			applyBuildPerks(player);
+		if (next.grantsNightVision()) {
+			applyStatePerks(player, next);
 		}
 
 		// Topped up on the way in; the mixins are what hold them there afterwards.
@@ -208,7 +253,29 @@ public final class AdminManager {
 	 * cannot be left stranded on a player if the mod is later removed. The cost is that it has to be
 	 * re-applied on login, which {@link #onJoin} does.
 	 */
+	/** Applies whatever perks the player's <em>current</em> state carries. */
 	public static void applyBuildPerks(final ServerPlayer player) {
+		applyStatePerks(player, getState(player));
+	}
+
+	/**
+	 * Applies the perks belonging to {@code state}.
+	 *
+	 * <p>Takes the state explicitly because {@code setState} calls this <em>before</em> committing the
+	 * new one — reading it back here would apply the perks of the state being left.
+	 *
+	 * <p>The reach bonus is Build Mode's alone. Vanish shares the night vision but not the reach: it
+	 * refuses world interaction by default, so a longer arm would be a setting with nothing to act on.
+	 */
+	public static void applyStatePerks(final ServerPlayer player, final AdminState state) {
+		if (state.grantsNightVision() && getBuildNightVision(player)) {
+			addBuildNightVision(player);
+		}
+
+		if (state != AdminState.BUILD) {
+			return;
+		}
+
 		int bonus = getReachBonus(player);
 
 		for (Holder<Attribute> attribute : REACH_ATTRIBUTES) {
@@ -226,10 +293,6 @@ public final class AdminManager {
 					);
 				}
 			}
-		}
-
-		if (getBuildNightVision(player)) {
-			addBuildNightVision(player);
 		}
 	}
 

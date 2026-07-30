@@ -588,6 +588,7 @@ Five **mutually exclusive** states (`AdminState`), which is what lets the HUD us
 | `GOD` | — | — | untouched | untouched |
 | `DEMIGOD` | — | — | untouched | untouched |
 | `GHOST` | yes | yes | untouched | untouched |
+| `VANISH` | yes | yes | untouched | admin loadout |
 
 `GHOST` is `GOD` plus fully vanished: untouchable and unseen while still in survival holding your own
 gear, which is the one thing `ADMIN` cannot give you (it forces creative). It exists precisely so the
@@ -749,6 +750,36 @@ raw preference); the HUD draws the state label at 20,20 and "Flight Enabled" (li
 beneath it. The
 payload has no version negotiation, so **client and server jars must be the same mod version**; a
 0.5.x client decoding the wider payload would desync/disconnect.
+
+### `/vanish` and the loadout/creative split
+
+Adding `VANISH` forced a refactor worth understanding: `stashesInventory()` used to mean *both* "uses a
+loadout" and "is creative". Vanish needs the first without the second, so they are now separate —
+`stashesInventory()` and **`forcesCreative()`** — and `setState` decides game mode independently of
+inventory. That is what makes `ADMIN → VANISH` drop out of creative while keeping the same loadout.
+
+`loadoutKey()` is why they share one: `VANISH` returns `ADMIN`, so tools set up on duty are already to
+hand. Change that one method to give Vanish its own slot instead.
+
+Interaction blocking lives in `InteractionGuard`, built on **Fabric's interaction events rather than
+mixins** — they exist for this, and cancelling through them makes the client roll back its prediction, so
+a refused break shows the block reappearing instead of vanishing and popping back. `pickupsBlocked` and
+`interactionBlocked` fold the state default together with the player's persisted override, so there is
+one answer and one place to change it.
+
+**Doors, trapdoors and fence gates are exempt** from the interaction block. The door still swings and
+still sounds for everyone — that is unhidden movement, not silent movement. Hiding it is a separate,
+unsolved problem: the block state genuinely changes server-side, so suppressing the update packet
+desyncs every *other* client rather than concealing anything. A better direction, still under discussion,
+is a configurable set of blocks the vanished player is told are passable — that desyncs only the vanished
+player, which is the safe direction.
+
+`EntityMixin` refuses fire ticks for fully protected players. Damage immunity is not the same as not
+burning: the flames still attach, and the fire overlay fills the watcher's own screen.
+
+**Adding a state is protocol-breaking.** `AdminState.STREAM_CODEC` is `values()[id]`, so a client built
+before the constant throws `ArrayIndexOutOfBounds` decoding it. Bump `PROTOCOL_VERSION` — version 3 is
+`VANISH`. New constants still go on the **end**.
 
 ## Settled behaviour — do not change without asking
 

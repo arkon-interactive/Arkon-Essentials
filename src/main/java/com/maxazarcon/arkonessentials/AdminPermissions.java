@@ -80,6 +80,9 @@ public final class AdminPermissions {
 	public static final Identifier FAKE_LEAVE = node("fake.leave");
 	public static final Identifier FAKE_JOIN = node("fake.join");
 
+	/** {@code /vanish} — its own node, not implied by {@code admin.ghost} or anything else. */
+	public static final Identifier VANISH = node("vanish");
+
 	public static final Identifier GOD = node("god");
 	public static final Identifier DEMIGOD = node("demigod");
 	public static final Identifier FLY = node("fly");
@@ -164,6 +167,7 @@ public final class AdminPermissions {
 		new Gate(AFK_TOGGLE, OPERATOR),
 		new Gate(FAKE_LEAVE, OPERATOR),
 		new Gate(FAKE_JOIN, OPERATOR),
+		new Gate(VANISH, OPERATOR),
 		new Gate(GOD, OPERATOR),
 		new Gate(DEMIGOD, OPERATOR),
 		new Gate(FLY, OPERATOR),
@@ -337,7 +341,9 @@ public final class AdminPermissions {
 	 * {@code /admin passive}. Each subcommand still gates itself.
 	 */
 	public static boolean mayUseAdminSuite(final CommandSourceStack source) {
-		for (Identifier node : new Identifier[]{ADMIN_MODE, ADMIN_GHOST, ADMIN_TP, ADMIN_HOME, PASSIVE, BUILD, GOD, DEMIGOD, FLY, FLY_SPEED}) {
+		for (Identifier node : new Identifier[]{
+			ADMIN_MODE, ADMIN_GHOST, ADMIN_TP, ADMIN_HOME, PASSIVE, BUILD, GOD, DEMIGOD, VANISH, FLY, FLY_SPEED
+		}) {
 			if (check(source, node)) {
 				return true;
 			}

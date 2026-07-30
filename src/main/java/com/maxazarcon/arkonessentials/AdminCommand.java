@@ -170,6 +170,16 @@ public final class AdminCommand {
 		dispatcher.register(stateCommand("passive", AdminState.PASSIVE, AdminPermissions.PASSIVE));
 		dispatcher.register(homeCommand("home"));
 		dispatcher.register(flyCommand("fly"));
+
+		// /nv as a root alias for /build nv. The night vision it toggles is not Build Mode's alone any
+		// more — Vanish grants it too — so a name that does not mention building is the better one to
+		// reach for, and the preference behind both is the same.
+		dispatcher.register(
+			Commands.literal("nv")
+				.requires(source -> EssentialsConfig.get().buildNightVisionAvailable
+					|| AdminPermissions.check(source, AdminPermissions.BUILD_NV))
+				.executes(context -> toggleNightVision(context.getSource()))
+		);
 	}
 
 	/**

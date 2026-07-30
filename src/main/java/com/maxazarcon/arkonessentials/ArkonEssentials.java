@@ -27,8 +27,13 @@ public class ArkonEssentials implements ModInitializer {
 	 * channel's name, so an old client simply never receives the packet instead of misreading it — the
 	 * incompatibility becomes structural rather than something both sides have to remember. Cosmetic and
 	 * server-side changes do not touch it.
+	 *
+	 * <p><strong>Adding an {@link AdminState} counts as a change.</strong> Its stream codec is
+	 * ordinal-based ({@code values()[id]}), so a client built before the new constant would throw
+	 * {@code ArrayIndexOutOfBoundsException} decoding it rather than merely showing the wrong label.
+	 * Version 3 added {@code VANISH}.
 	 */
-	public static final int PROTOCOL_VERSION = 2;
+	public static final int PROTOCOL_VERSION = 3;
 
 	/** Stamped into the saved data, so a downgrade can name the version that wrote the file. */
 	public static final String VERSION = FabricLoader.getInstance()
@@ -42,6 +47,9 @@ public class ArkonEssentials implements ModInitializer {
 		EssentialsConfig.load();
 
 		WebMapIntegration.logStatus();
+
+		// Refuses breaking, placing, attacking and using for anyone whose state blocks interaction.
+		InteractionGuard.register();
 
 		PayloadTypeRegistry.clientboundPlay().register(AdminStatePayload.TYPE, AdminStatePayload.STREAM_CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(HandshakePayload.TYPE, HandshakePayload.STREAM_CODEC);
@@ -76,6 +84,7 @@ public class ArkonEssentials implements ModInitializer {
 			TpCommand.register(dispatcher);
 			PresenceCommand.register(dispatcher);
 			ModeCommand.register(dispatcher);
+			VanishCommand.register(dispatcher);
 			ArkonCommand.register(dispatcher);
 		});
 

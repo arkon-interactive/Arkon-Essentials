@@ -42,7 +42,17 @@ public enum AdminState implements StringRepresentable {
 	BUILD("build", "Build Mode", 0xFF55FFFF),
 	GOD("god", "God Mode", 0xFFFFAA00),
 	DEMIGOD("demigod", "Demigod", 0xFFC0C0C0),
-	GHOST("ghost", "Ghost", 0xFF808080);
+	GHOST("ghost", "Ghost", 0xFF808080),
+
+	/**
+	 * Observation with no footprint: vanished, protected, and unable to disturb anything.
+	 *
+	 * <p>Unlike {@link #ADMIN} it leaves you in survival — it swaps to the admin loadout without
+	 * touching your game mode — and it additionally refuses item pickups and world interaction, so
+	 * watching an area cannot accidentally change it. Both of those are toggleable per player via
+	 * {@code /vanish pickups} and {@code /vanish interact}.
+	 */
+	VANISH("vanish", "Vanish", 0xFFFF55FF);
 
 	private static final StringRepresentable.EnumCodec<AdminState> BASE_CODEC = StringRepresentable.fromEnum(AdminState::values);
 
@@ -107,6 +117,9 @@ public enum AdminState implements StringRepresentable {
 			case GOD -> "Nothing lands: damage, knockback and harmful effects are all refused. Game mode and inventory untouched. Flight available.";
 			case DEMIGOD -> "Hits land in full — animation, knockback, particles — but never cost you health. Game mode and inventory untouched. Flight if permitted.";
 			case GHOST -> "Invisible God Mode, still in survival. Unseen and untouchable, holding your own gear, game mode untouched. Flight available.";
+			case VANISH -> "Unseen, untouched and leaving no trace: survival with the admin loadout, no damage, no effects, "
+				+ "and item pickups and world interaction both refused. Night vision and flight included. "
+				+ "Use /vanish pickups and /vanish interact to allow either.";
 		};
 	}
 
@@ -117,12 +130,57 @@ public enum AdminState implements StringRepresentable {
 	 * game mode and loadout, not visibility.
 	 */
 	public boolean hiddenFromPlayers() {
-		return this == ADMIN || this == GHOST;
+		return this == ADMIN || this == GHOST || this == VANISH;
 	}
 
 	/** Whether mobs should refuse to target this player. */
 	public boolean hiddenFromMobs() {
-		return this == ADMIN || this == PASSIVE || this == GHOST;
+		return this == ADMIN || this == PASSIVE || this == GHOST || this == VANISH;
+	}
+
+	/**
+	 * Whether entering this state swaps the player onto a stored loadout, stashing their own gear.
+	 *
+	 * <p>Deliberately <strong>separate from {@link #forcesCreative()}</strong>. The two used to be one
+	 * test, which made "a loadout" and "creative" inseparable; {@link #VANISH} needs the first without
+	 * the second.
+	 */
+	public boolean stashesInventory() {
+		return this == ADMIN || this == BUILD || this == VANISH;
+	}
+
+	/** Whether entering this state puts the player in creative, and leaving it takes them back out. */
+	public boolean forcesCreative() {
+		return this == ADMIN || this == BUILD;
+	}
+
+	/**
+	 * Which state's loadout slot this one uses.
+	 *
+	 * <p>{@link #VANISH} shares {@link #ADMIN}'s, so tools set up on duty are already to hand when
+	 * vanishing — they are the same job. Every other state keeps its own, which is what stops admin
+	 * tools and building tools mixing.
+	 */
+	public AdminState loadoutKey() {
+		return this == VANISH ? ADMIN : this;
+	}
+
+	/** Whether this state refuses item pickups by default. Overridable per player. */
+	public boolean blocksPickupsByDefault() {
+		return this == VANISH;
+	}
+
+	/**
+	 * Whether this state refuses world interaction by default — breaking, placing, attacking, and using
+	 * blocks or entities. Overridable per player.
+	 */
+	public boolean blocksInteractionByDefault() {
+		return this == VANISH;
+	}
+
+	/** Whether this state grants permanent night vision, as Build Mode does for its own reasons. */
+	public boolean grantsNightVision() {
+		return this == BUILD || this == VANISH;
 	}
 
 	/**
@@ -130,13 +188,10 @@ public enum AdminState implements StringRepresentable {
 	 * state keeps a separate inventory, so admin tools and building tools never mix — and neither
 	 * touches the player's own survival gear.
 	 */
-	public boolean stashesInventory() {
-		return this == ADMIN || this == BUILD;
-	}
 
 	/** Health and hunger are pinned full, and carried gear takes no durability damage. */
 	public boolean protectsPlayer() {
-		return this == GOD || this == DEMIGOD || this == GHOST;
+		return this == GOD || this == DEMIGOD || this == GHOST || this == VANISH;
 	}
 
 	/**
@@ -147,7 +202,7 @@ public enum AdminState implements StringRepresentable {
 	 * sees and feels everything.
 	 */
 	public boolean blocksDamageEntirely() {
-		return this == GOD || this == GHOST;
+		return this == GOD || this == GHOST || this == VANISH;
 	}
 
 	/**
@@ -159,6 +214,6 @@ public enum AdminState implements StringRepresentable {
 	 * through creative, and {@link #PASSIVE} is not meant to.
 	 */
 	public boolean alwaysGrantsFlight() {
-		return this == GOD || this == GHOST;
+		return this == GOD || this == GHOST || this == VANISH;
 	}
 }
