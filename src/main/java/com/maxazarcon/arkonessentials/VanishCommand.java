@@ -50,6 +50,29 @@ public final class VanishCommand {
 		}
 
 		dispatcher.register(vanish);
+
+		// Its own root rather than /vanish noclip: it works from any mode, and burying it under /vanish
+		// would imply it needs vanishing first.
+		dispatcher.register(
+			Commands.literal("noclip")
+				.requires(source -> AdminPermissions.check(source, AdminPermissions.VANISH_NOCLIP))
+				.executes(context -> toggleNoclip(context.getSource()))
+		);
+	}
+
+	private static int toggleNoclip(final CommandSourceStack source) throws CommandSyntaxException {
+		ServerPlayer player = source.getPlayerOrException();
+		boolean on = NoclipManager.toggle(player);
+
+		source.sendSuccess(
+			() -> Component.literal(
+				on
+					? "Noclip on — spectator, so no hotbar and no interaction until you toggle it off."
+					: "Noclip off."
+			).withStyle(on ? ChatFormatting.AQUA : ChatFormatting.GRAY),
+			false
+		);
+		return 1;
 	}
 
 	private static int toggleState(final CommandSourceStack source) throws CommandSyntaxException {

@@ -83,6 +83,12 @@ public final class AdminPermissions {
 	/** {@code /vanish} — its own node, not implied by {@code admin.ghost} or anything else. */
 	public static final Identifier VANISH = node("vanish");
 
+	/**
+	 * {@code /noclip}. Note the dotted-node rule: granting {@code vanish} also grants this unless the
+	 * child is denied explicitly, which is usually right — both are the same job.
+	 */
+	public static final Identifier VANISH_NOCLIP = node("vanish.noclip");
+
 	public static final Identifier GOD = node("god");
 	public static final Identifier DEMIGOD = node("demigod");
 	public static final Identifier FLY = node("fly");
@@ -168,6 +174,7 @@ public final class AdminPermissions {
 		new Gate(FAKE_LEAVE, OPERATOR),
 		new Gate(FAKE_JOIN, OPERATOR),
 		new Gate(VANISH, OPERATOR),
+		new Gate(VANISH_NOCLIP, OPERATOR),
 		new Gate(GOD, OPERATOR),
 		new Gate(DEMIGOD, OPERATOR),
 		new Gate(FLY, OPERATOR),

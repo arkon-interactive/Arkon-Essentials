@@ -91,9 +91,12 @@ class EssentialsDataTest {
 
 		EssentialsData data = new EssentialsData();
 		data.setState(id, AdminState.GHOST);
-		data.putSurvivalInventory(id, new InventorySnapshot(List.of(pickaxe, ItemStack.EMPTY, torches), 2));
-		data.putLoadout(id, AdminState.ADMIN, new InventorySnapshot(List.of(torches.copy()), 0));
-		data.putLoadout(id, AdminState.BUILD, new InventorySnapshot(List.of(scaffolding), 0));
+		data.putStash(id, AdminState.ADMIN, new InventorySnapshot(List.of(pickaxe, ItemStack.EMPTY, torches), 2));
+		data.putLoadout(id, EssentialsData.LoadoutKey.of(AdminState.ADMIN), new InventorySnapshot(List.of(torches.copy()), 0));
+		data.putLoadout(id, EssentialsData.LoadoutKey.of(AdminState.BUILD), new InventorySnapshot(List.of(scaffolding), 0));
+		// Same mode, other game mode: a separate slot, and the assertion below is what proves a creative
+		// loadout can never be handed back in survival.
+		data.putLoadout(id, new EssentialsData.LoadoutKey(AdminState.VANISH, false), new InventorySnapshot(List.of(pickaxe.copy()), 0));
 		data.setLastNonCreativeMode(id, GameType.ADVENTURE);
 		data.setReturnPoint(id, new SavedLocation(Level.NETHER, new Vec3(1.5, 64.0, -7.25), 90.0F, -12.5F));
 		// Deliberately a different dimension and position from the return point: they are the same type,
@@ -130,15 +133,18 @@ class EssentialsDataTest {
 		assertTrue(decoded.getVanishPickups(id));
 		assertFalse(decoded.getVanishInteract(id));
 
-		InventorySnapshot survival = decoded.takeSurvivalInventory(id).orElseThrow();
+		InventorySnapshot survival = decoded.takeStash(id, AdminState.ADMIN).orElseThrow();
 		assertEquals(3, survival.items().size());
 		assertSameStack(pickaxe, survival.items().get(0));
 		assertSameStack(ItemStack.EMPTY, survival.items().get(1));
 		assertSameStack(torches, survival.items().get(2));
 		assertEquals(2, survival.selectedSlot());
 
-		assertSameStack(torches, decoded.getLoadout(id, AdminState.ADMIN).orElseThrow().items().get(0));
-		assertSameStack(scaffolding, decoded.getLoadout(id, AdminState.BUILD).orElseThrow().items().get(0));
+		assertSameStack(torches, decoded.getLoadout(id, EssentialsData.LoadoutKey.of(AdminState.ADMIN)).orElseThrow().items().get(0));
+		assertSameStack(scaffolding, decoded.getLoadout(id, EssentialsData.LoadoutKey.of(AdminState.BUILD)).orElseThrow().items().get(0));
+		assertSameStack(pickaxe, decoded.getLoadout(id, new EssentialsData.LoadoutKey(AdminState.VANISH, false)).orElseThrow().items().get(0));
+		assertTrue(decoded.getLoadout(id, new EssentialsData.LoadoutKey(AdminState.VANISH, true)).isEmpty(),
+			"the creative slot of a survival mode must stay empty");
 
 		// return_point and home are the same type, adjacent in the codec group. This pair of asserts is
 		// the one that catches them swapped.
@@ -236,7 +242,9 @@ class EssentialsDataTest {
 
 		EssentialsData decoded = decode(root);
 
-		assertSameStack(relic, decoded.getLoadout(id, AdminState.ADMIN).orElseThrow().items().get(0));
+		// Folded into the creative slot: pre-0.30 loadouts only existed for Admin and Build, both creative,
+		// which is exactly what the codec's "creative" default of true encodes.
+		assertSameStack(relic, decoded.getLoadout(id, EssentialsData.LoadoutKey.of(AdminState.ADMIN)).orElseThrow().items().get(0));
 
 		// Writing back must emit the modern shape only, so the legacy field disappears after one cycle.
 		CompoundTag reencoded = (CompoundTag) encode(decoded);

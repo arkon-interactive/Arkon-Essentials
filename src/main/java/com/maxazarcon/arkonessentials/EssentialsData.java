@@ -5,6 +5,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -81,31 +82,62 @@ public class EssentialsData extends SavedData {
 	 *
 	 * <p>Bump this whenever the persisted shape changes in a way an older build could not faithfully
 	 * write back. Version 1 was the 1.0.x layout with a single {@code admin_inventory}; version 2 is
-	 * per-state loadouts plus saved locations.
+	 * per-state loadouts plus saved locations; version 3 splits loadouts by game mode and gives every
+	 * mode its own stash.
+	 *
+	 * <p>Version 3 earns the bump: an older build would read the two loadout slots of a mode as one — the
+	 * {@code creative} flag it does not know about would collapse and one would overwrite the other — and
+	 * would drop every per-mode stash on the floor. Both are inventories, which is exactly the line
+	 * between bumping and not.
 	 *
 	 * <p>Two rules keep the downgrade guard working, and future format changes must respect both:
 	 * {@code data_version} stays a plain int at the root, and {@code players} stays an optional list.
 	 * The guard can only report a version it is still able to read.
 	 */
-	public static final int DATA_VERSION = 2;
+	public static final int DATA_VERSION = 3;
 
 	/**
 	 * Persisted as a list of pairs rather than {@link Codec#unboundedMap}. A map codec needs its keys
 	 * to survive as map keys in the target format, which holds for NBT but quietly stops holding for
 	 * any ops that compress maps. A list has no such dependency.
 	 */
-	private static final Codec<Map<AdminState, InventorySnapshot>> LOADOUTS_CODEC = Loadout.CODEC
+	/**
+	 * Deterministic write order for loadout slots.
+	 *
+	 * <p>Declared before the codec that uses it: static initialisers run in source order, so referring to
+	 * it from above would be an illegal forward reference rather than merely untidy.
+	 */
+	private static final Comparator<Map.Entry<LoadoutKey, InventorySnapshot>> LOADOUT_ORDER =
+		Comparator.<Map.Entry<LoadoutKey, InventorySnapshot>, Integer>comparing(e -> e.getKey().state().ordinal())
+			.thenComparing(e -> e.getKey().creative());
+
+	private static final Codec<Map<LoadoutKey, InventorySnapshot>> LOADOUTS_CODEC = Loadout.CODEC
 		.listOf()
 		.xmap(
 			list -> {
-				Map<AdminState, InventorySnapshot> loadouts = new EnumMap<>(AdminState.class);
-				list.forEach(loadout -> loadouts.put(loadout.state(), loadout.inventory()));
+				Map<LoadoutKey, InventorySnapshot> loadouts = new LinkedHashMap<>();
+				list.forEach(loadout -> loadouts.put(new LoadoutKey(loadout.state(), loadout.creative()), loadout.inventory()));
 				return loadouts;
 			},
 			loadouts -> loadouts.entrySet()
 				.stream()
-				.map(e -> new Loadout(e.getKey(), e.getValue()))
+				// Sorted rather than left in map order, so the file does not reshuffle between saves for
+				// no reason. A record key cannot use EnumMap, so insertion order is all the map offers.
+				.sorted(LOADOUT_ORDER)
+				.map(e -> new Loadout(e.getKey().state(), e.getKey().creative(), e.getValue()))
 				.toList()
+		);
+
+	/** Per-mode stash of the player's <em>own</em> gear, as it was when they entered that mode. */
+	private static final Codec<Map<AdminState, InventorySnapshot>> STASHES_CODEC = Stash.CODEC
+		.listOf()
+		.xmap(
+			list -> {
+				Map<AdminState, InventorySnapshot> stashes = new EnumMap<>(AdminState.class);
+				list.forEach(stash -> stashes.put(stash.state(), stash.inventory()));
+				return stashes;
+			},
+			stashes -> stashes.entrySet().stream().map(e -> new Stash(e.getKey(), e.getValue())).toList()
 		);
 
 	/**
@@ -133,8 +165,10 @@ public class EssentialsData extends SavedData {
 	private static final Codec<Entry> ENTRY_CODEC = RecordCodecBuilder.create(instance -> instance.group(
 		UUIDUtil.CODEC.fieldOf("player").forGetter(Entry::playerId),
 		AdminState.CODEC.optionalFieldOf("state", AdminState.NONE).forGetter(Entry::state),
-		InventorySnapshot.CODEC.optionalFieldOf("survival_inventory").forGetter(Entry::survivalInventory),
+		// Read-only from 0.30 on: a single global stash, folded into the per-mode map by fromDisk.
+		InventorySnapshot.CODEC.optionalFieldOf("survival_inventory").forGetter(entry -> Optional.<InventorySnapshot>empty()),
 		LOADOUTS_CODEC.optionalFieldOf("loadouts", Map.of()).forGetter(Entry::loadouts),
+		STASHES_CODEC.optionalFieldOf("stashes", Map.of()).forGetter(Entry::stashes),
 		GameType.CODEC.optionalFieldOf("last_non_creative_mode", GameType.SURVIVAL).forGetter(Entry::lastNonCreativeMode),
 		// Three grouped MapCodecs rather than seventeen loose fields. Each writes its own keys at THIS
 		// level — the file layout is unchanged — while costing one argument instead of many, which is
@@ -305,35 +339,49 @@ public class EssentialsData extends SavedData {
 		}
 	}
 
-	/** The player's own belongings, held only while they are in one of the creative states. */
-	public Optional<InventorySnapshot> takeSurvivalInventory(final UUID playerId) {
+	/**
+	 * Takes back the gear this player was carrying when they entered {@code state}.
+	 *
+	 * <p>Per mode rather than one shared stash, so cycling through several modes returns exactly what
+	 * you were holding before each of them instead of whatever the last one happened to save.
+	 */
+	public Optional<InventorySnapshot> takeStash(final UUID playerId, final AdminState state) {
 		Entry entry = entry(playerId);
-		Optional<InventorySnapshot> inventory = entry.survivalInventory();
+		Optional<InventorySnapshot> inventory = Optional.ofNullable(entry.stashes().get(state));
 
 		if (inventory.isPresent()) {
-			put(entry.withSurvivalInventory(Optional.empty()));
+			Map<AdminState, InventorySnapshot> stashes = new EnumMap<>(AdminState.class);
+			stashes.putAll(entry.stashes());
+			stashes.remove(state);
+			put(entry.withStashes(stashes));
 		}
 
 		return inventory;
 	}
 
-	public void putSurvivalInventory(final UUID playerId, final InventorySnapshot inventory) {
-		put(entry(playerId).withSurvivalInventory(Optional.of(inventory)));
+	public void putStash(final UUID playerId, final AdminState state, final InventorySnapshot inventory) {
+		Entry entry = entry(playerId);
+		Map<AdminState, InventorySnapshot> stashes = new EnumMap<>(AdminState.class);
+		stashes.putAll(entry.stashes());
+		stashes.put(state, inventory);
+		put(entry.withStashes(stashes));
 	}
 
 	/**
-	 * The saved loadout for a given creative state, kept permanently so nobody restocks. Admin tools
-	 * and building tools live in separate entries and never mix.
+	 * The saved loadout for one slot, kept permanently so nobody restocks.
+	 *
+	 * <p>Keyed by mode <em>and</em> game mode: a mode entered in creative and the same mode entered in
+	 * survival keep separate loadouts, which is what stops creative-spawned items being handed back as
+	 * real ones.
 	 */
-	public Optional<InventorySnapshot> getLoadout(final UUID playerId, final AdminState state) {
-		return Optional.ofNullable(entry(playerId).loadouts().get(state));
+	public Optional<InventorySnapshot> getLoadout(final UUID playerId, final LoadoutKey key) {
+		return Optional.ofNullable(entry(playerId).loadouts().get(key));
 	}
 
-	public void putLoadout(final UUID playerId, final AdminState state, final InventorySnapshot inventory) {
+	public void putLoadout(final UUID playerId, final LoadoutKey key, final InventorySnapshot inventory) {
 		Entry entry = entry(playerId);
-		Map<AdminState, InventorySnapshot> loadouts = new EnumMap<>(AdminState.class);
-		loadouts.putAll(entry.loadouts());
-		loadouts.put(state, inventory);
+		Map<LoadoutKey, InventorySnapshot> loadouts = new LinkedHashMap<>(entry.loadouts());
+		loadouts.put(key, inventory);
 		put(entry.withLoadouts(loadouts));
 	}
 
@@ -473,12 +521,37 @@ public class EssentialsData extends SavedData {
 		return true;
 	}
 
-	/** One state's saved loadout, as stored on disk. */
-	private record Loadout(AdminState state, InventorySnapshot inventory) {
+	/**
+	 * Which loadout slot a player is using: the mode, and whether they are in creative while in it.
+	 *
+	 * <p>The game mode is part of the key on purpose. Without it a mode that can be entered in either —
+	 * and {@link AdminState#VANISH} is survival while {@link AdminState#ADMIN} is creative — would let a
+	 * creative-spawned loadout be handed straight back in survival, which is an item duplication vector
+	 * rather than a convenience.
+	 */
+	public record LoadoutKey(AdminState state, boolean creative) {
+		public static LoadoutKey of(final AdminState state) {
+			return new LoadoutKey(state, state.forcesCreative());
+		}
+	}
+
+	/** One loadout slot, as stored on disk. */
+	private record Loadout(AdminState state, boolean creative, InventorySnapshot inventory) {
 		static final Codec<Loadout> CODEC = RecordCodecBuilder.create(instance -> instance.group(
 			AdminState.CODEC.fieldOf("state").forGetter(Loadout::state),
+			// Defaults true when absent, which is exactly right for a pre-0.30 file: loadouts only ever
+			// existed for Admin and Build, and both of those are creative.
+			Codec.BOOL.optionalFieldOf("creative", true).forGetter(Loadout::creative),
 			InventorySnapshot.CODEC.fieldOf("inventory").forGetter(Loadout::inventory)
 		).apply(instance, Loadout::new));
+	}
+
+	/** One mode's stash of the player's own gear, as stored on disk. */
+	private record Stash(AdminState state, InventorySnapshot inventory) {
+		static final Codec<Stash> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+			AdminState.CODEC.fieldOf("state").forGetter(Stash::state),
+			InventorySnapshot.CODEC.fieldOf("inventory").forGetter(Stash::inventory)
+		).apply(instance, Stash::new));
 	}
 
 	/** One named home, as stored on disk. */
@@ -599,8 +672,8 @@ public class EssentialsData extends SavedData {
 	private record Entry(
 		UUID playerId,
 		AdminState state,
-		Optional<InventorySnapshot> survivalInventory,
-		Map<AdminState, InventorySnapshot> loadouts,
+		Map<LoadoutKey, InventorySnapshot> loadouts,
+		Map<AdminState, InventorySnapshot> stashes,
 		GameType lastNonCreativeMode,
 		Locations locations,
 		Preferences preferences
@@ -649,16 +722,28 @@ public class EssentialsData extends SavedData {
 		static Entry fromDisk(
 			final UUID playerId,
 			final AdminState state,
-			final Optional<InventorySnapshot> survivalInventory,
-			final Map<AdminState, InventorySnapshot> loadouts,
+			final Optional<InventorySnapshot> legacySurvivalInventory,
+			final Map<LoadoutKey, InventorySnapshot> loadouts,
+			final Map<AdminState, InventorySnapshot> stashes,
 			final GameType lastNonCreativeMode,
 			final Locations locations,
 			final Preferences preferences,
 			final Legacy legacy
 		) {
-			Map<AdminState, InventorySnapshot> mergedLoadouts = new EnumMap<>(AdminState.class);
-			mergedLoadouts.putAll(loadouts);
-			legacy.adminInventory().ifPresent(inventory -> mergedLoadouts.putIfAbsent(AdminState.ADMIN, inventory));
+			Map<LoadoutKey, InventorySnapshot> mergedLoadouts = new LinkedHashMap<>(loadouts);
+			legacy.adminInventory().ifPresent(
+				inventory -> mergedLoadouts.putIfAbsent(LoadoutKey.of(AdminState.ADMIN), inventory)
+			);
+
+			// The pre-0.30 single stash belongs to whichever mode the player is currently in, because that
+			// is the only time one existed — it was written on the way into a loadout state and taken back
+			// on the way out. If the state somehow does not use a loadout, it is filed under ADMIN rather
+			// than dropped: a wrong drawer is recoverable with /admin and /admin off, lost gear is not.
+			Map<AdminState, InventorySnapshot> mergedStashes = new EnumMap<>(AdminState.class);
+			mergedStashes.putAll(stashes);
+			legacySurvivalInventory.ifPresent(inventory -> mergedStashes.putIfAbsent(
+				state.stashesInventory() ? state : AdminState.ADMIN, inventory
+			));
 
 			// Lands in the admin tier: named homes only ever existed for admins before the split, so
 			// that is where a pre-split "home" belongs.
@@ -669,14 +754,16 @@ public class EssentialsData extends SavedData {
 				locations.returnPoint(), locations.backPoint(), orderedCopy(locations.homes()), orderedCopy(mergedAdminHomes)
 			);
 
-			return new Entry(playerId, state, survivalInventory, Map.copyOf(mergedLoadouts), lastNonCreativeMode, merged, preferences);
+			return new Entry(
+				playerId, state, Map.copyOf(mergedLoadouts), Map.copyOf(mergedStashes), lastNonCreativeMode, merged, preferences
+			);
 		}
 
 		static Entry empty(final UUID playerId) {
 			return new Entry(
 				playerId,
 				AdminState.NONE,
-				Optional.empty(),
+				Map.of(),
 				Map.of(),
 				GameType.SURVIVAL,
 				Locations.EMPTY,
@@ -686,8 +773,8 @@ public class EssentialsData extends SavedData {
 
 		boolean isDefault() {
 			return this.state == AdminState.NONE
-				&& this.survivalInventory.isEmpty()
 				&& this.loadouts.isEmpty()
+				&& this.stashes.isEmpty()
 				&& this.lastNonCreativeMode == GameType.SURVIVAL
 				&& this.locations.isDefault()
 				&& this.preferences.isDefault();
@@ -695,42 +782,42 @@ public class EssentialsData extends SavedData {
 
 		Entry withState(final AdminState newState) {
 			return new Entry(
-				this.playerId, newState, this.survivalInventory, this.loadouts, this.lastNonCreativeMode,
+				this.playerId, newState, this.loadouts, this.stashes, this.lastNonCreativeMode,
 				this.locations, this.preferences
 			);
 		}
 
-		Entry withSurvivalInventory(final Optional<InventorySnapshot> inventory) {
+		Entry withStashes(final Map<AdminState, InventorySnapshot> newStashes) {
 			return new Entry(
-				this.playerId, this.state, inventory, this.loadouts, this.lastNonCreativeMode,
+				this.playerId, this.state, this.loadouts, Map.copyOf(newStashes), this.lastNonCreativeMode,
 				this.locations, this.preferences
 			);
 		}
 
-		Entry withLoadouts(final Map<AdminState, InventorySnapshot> newLoadouts) {
+		Entry withLoadouts(final Map<LoadoutKey, InventorySnapshot> newLoadouts) {
 			return new Entry(
-				this.playerId, this.state, this.survivalInventory, Map.copyOf(newLoadouts), this.lastNonCreativeMode,
+				this.playerId, this.state, Map.copyOf(newLoadouts), this.stashes, this.lastNonCreativeMode,
 				this.locations, this.preferences
 			);
 		}
 
 		Entry withLastNonCreativeMode(final GameType mode) {
 			return new Entry(
-				this.playerId, this.state, this.survivalInventory, this.loadouts, mode,
+				this.playerId, this.state, this.loadouts, this.stashes, mode,
 				this.locations, this.preferences
 			);
 		}
 
 		private Entry withLocations(final Locations newLocations) {
 			return new Entry(
-				this.playerId, this.state, this.survivalInventory, this.loadouts, this.lastNonCreativeMode,
+				this.playerId, this.state, this.loadouts, this.stashes, this.lastNonCreativeMode,
 				newLocations, this.preferences
 			);
 		}
 
 		private Entry withPreferences(final Preferences newPreferences) {
 			return new Entry(
-				this.playerId, this.state, this.survivalInventory, this.loadouts, this.lastNonCreativeMode,
+				this.playerId, this.state, this.loadouts, this.stashes, this.lastNonCreativeMode,
 				this.locations, newPreferences
 			);
 		}

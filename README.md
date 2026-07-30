@@ -30,7 +30,7 @@ versions.
 
 ## Modes
 
-Six mutually exclusive states. Only one is active at a time, which is why the HUD needs a single label.
+Seven mutually exclusive states. Only one is active at a time, which is why the HUD needs a single label.
 
 | Mode | Command | Hidden from players | Ignored by mobs | Game mode | Inventory |
 |---|---|---|---|---|---|
@@ -58,9 +58,16 @@ lit screen while you sit still.
 | `/vanish` | Toggle |
 | `/vanish pickups` or `/vanish p` | Allow or refuse picking items up |
 | `/vanish interact` or `/vanish i` | Allow or refuse world interaction |
+| `/noclip` | Fly through blocks — see the caveat below |
 
-Both modifiers are off by default and persist per player, so you can flip them mid-session without
-leaving the mode.
+`pickups` and `interact` are both off by default and persist per player, so you can flip them
+mid-session without leaving the mode.
+
+**`/noclip` uses spectator mode**, because that is the only thing in Minecraft that actually passes
+through blocks: the client decides collision for the player you are controlling, from your game mode,
+every tick. A server cannot grant noclip any other way, and creative flight collides like everything
+else. So while noclipping you get spectator's rules — **no hotbar and no interaction at all** — and the
+toggle puts you back where you were. Node: `arkonessentials:vanish.noclip`.
 
 > **Doors, trapdoors and fence gates always work**, even with interaction refused — a mode for moving
 > quietly through a building that cannot open a door is not much use. Note the door still swings and
@@ -75,9 +82,13 @@ loadout.
 you, and staying visible is the point when building in front of people. It adds night vision and a
 reach bonus on both interaction-range attributes.
 
-Any mode that stashes your inventory (Admin, Build) keeps **its own permanent loadout**, so admin tools
-and building tools never mix and neither touches your survival gear. Loadouts persist across restarts —
-staff never restock.
+Any mode that stashes your inventory (Admin, Build, Vanish) keeps **its own permanent loadouts** — one
+for creative and one for survival — plus its own record of the gear you were carrying when you entered
+it. Loadouts persist across restarts, so staff never restock, and cycling through several modes returns
+exactly what you had before each.
+
+> Splitting creative from survival is a safety property, not just tidiness. A single shared loadout would
+> let items spawned in a creative mode be handed back in a survival one, turning them into real items.
 
 > **`/admin off` is a full reset.** It clears the state, restores your gear, and pulls you out of
 > creative even if the active mode never put you there. Repeating `/admin passive` or `/admin ghost`
@@ -334,6 +345,7 @@ Nodes are `arkonessentials:<node>`, which permission mods usually write dotted:
 | `god` | God Mode |
 | `demigod` | Demigod |
 | `vanish` | Vanish, and its two modifiers |
+| `vanish.noclip` | `/noclip` |
 | `fly` | `/fly` |
 | `fly.speed` | `/fly speed` |
 | `tp` | `/tp <player>` |

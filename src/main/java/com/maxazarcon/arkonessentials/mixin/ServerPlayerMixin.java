@@ -1,6 +1,7 @@
 package com.maxazarcon.arkonessentials.mixin;
 
 import com.maxazarcon.arkonessentials.EssentialsData;
+import com.maxazarcon.arkonessentials.NoclipManager;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.GameType;
@@ -34,6 +35,13 @@ public abstract class ServerPlayerMixin {
 		// The whole point: creative is never recorded, so the stored value stays the last mode the player
 		// was actually playing in and /admin off has somewhere real to put them back.
 		if (mode == GameType.CREATIVE) {
+			return;
+		}
+
+		// Spectator normally *is* worth recording — someone who was spectating before going on duty
+		// expects to be spectating after. But /noclip borrows spectator as a mechanism, and recording it
+		// would leave /admin off dumping them into spectator long after they stopped noclipping.
+		if (NoclipManager.trackingSuppressed()) {
 			return;
 		}
 

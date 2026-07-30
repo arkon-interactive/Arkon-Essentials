@@ -173,18 +173,19 @@ public final class AdminManager {
 		// Judged against the outgoing state, before anything below mutates abilities.
 		boolean hadFlight = data.getFlyEnabled(id) && stateGrantsFlight(player, current);
 
-		// Whatever the player is holding belongs to the state they are leaving, so it goes back into
-		// that state's loadout rather than a single shared one. loadoutKey, not the state itself:
-		// Vanish deliberately shares Admin's slot.
+		// Whatever the player is holding belongs to the state they are leaving, so it goes back into that
+		// state's own slot. Captured against the game mode they are in *now*, before the change below —
+		// a creative loadout must never be filed where a survival one would be handed back.
 		if (leavingLoadout) {
-			data.putLoadout(id, current.loadoutKey(), InventorySnapshot.capture(player));
+			data.putLoadout(id, new EssentialsData.LoadoutKey(current, player.gameMode() == GameType.CREATIVE),
+				InventorySnapshot.capture(player));
 		}
 
-		// Their own gear is stashed only on the way in from a state that was not already using a
-		// loadout. Switching directly between two loadout states must leave it alone, or the second
-		// swap would overwrite the survival stash with a loadout.
+		// Their own gear is stashed under the mode they are entering, and only from a state that was not
+		// already using a loadout. Switching straight between two loadout states must leave it alone, or
+		// the second swap would stash a loadout as if it were the player's own gear.
 		if (enteringLoadout && !leavingLoadout) {
-			data.putSurvivalInventory(id, InventorySnapshot.capture(player));
+			data.putStash(id, next, InventorySnapshot.capture(player));
 		}
 
 		// Game mode is decided independently of the inventory. Vanish is the reason: it takes a loadout
@@ -197,10 +198,11 @@ public final class AdminManager {
 			player.setGameMode(data.getLastNonCreativeMode(id));
 		}
 
+		// Read after the game-mode change above, so the key matches the mode the player is actually in.
 		if (enteringLoadout) {
-			restoreOrClear(player, data.getLoadout(id, next.loadoutKey()));
+			restoreOrClear(player, data.getLoadout(id, new EssentialsData.LoadoutKey(next, player.gameMode() == GameType.CREATIVE)));
 		} else if (leavingLoadout) {
-			restoreOrClear(player, data.takeSurvivalInventory(id));
+			restoreOrClear(player, data.takeStash(id, current));
 		}
 
 		if (current.grantsNightVision()) {

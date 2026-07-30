@@ -751,6 +751,39 @@ beneath it. The
 payload has no version negotiation, so **client and server jars must be the same mod version**; a
 0.5.x client decoding the wider payload would desync/disconnect.
 
+### Loadouts are keyed by mode *and* game mode
+
+`LoadoutKey(AdminState, boolean creative)`. **This is a correctness fix, not a convenience.** When
+`VANISH` shared `ADMIN`'s single loadout, Admin was creative and Vanish survival, so items spawned in
+Admin came back as real items in survival — an item duplication vector. Splitting by game mode makes
+that structurally impossible: a creative loadout and a survival one are different slots.
+
+Stashes of the player's own gear are also **per mode** (`stashes`), so cycling Admin → Build → off
+returns what you were holding before each, rather than whatever the last one saved.
+
+Migration is handled and needs no guessing: the `creative` flag defaults to **true** when absent, which
+is exactly right for a pre-0.30 file (loadouts existed only for Admin and Build, both creative), and the
+old single `survival_inventory` is folded into the stash of the player's *current* state — the only mode
+that could have owned it, since a stash existed only while in a loadout state. If that state somehow does
+not use a loadout it is filed under ADMIN rather than dropped: a wrong drawer is recoverable, lost gear
+is not.
+
+`DATA_VERSION` is **3**, and this one earns it — an older build would collapse a mode's two loadout slots
+into one and drop every per-mode stash. Both are inventories, which is the line.
+
+### Noclip is spectator, and that is not negotiable
+
+`Player` does `noPhysics = isSpectator()` **every tick, in code shared with the client** — so
+`LocalPlayer` decides collision for the player being controlled, locally, from game mode. A server cannot
+grant noclip: setting the flag server-side is overwritten next tick and the client never read it. Creative
+flight collides like anything else. Do not try to "fix" this server-side; the only alternative is a client
+mixin, which only helps players running our optional jar and is functionally a fly-through-walls hack.
+
+`NoclipManager` therefore swaps game mode and swaps back, holding the return mode in memory (restored on
+toggle and on disconnect; a crash mid-noclip leaves someone in spectator, recoverable with `/gamemode`).
+It sets `suppressModeTracking` around the change so `ServerPlayerMixin` does not record spectator as the
+player's `lastNonCreativeMode` and send `/admin off` there later.
+
 ### `/vanish` and the loadout/creative split
 
 Adding `VANISH` forced a refactor worth understanding: `stashesInventory()` used to mean *both* "uses a

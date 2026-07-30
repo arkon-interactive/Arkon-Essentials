@@ -138,6 +138,10 @@ public class ArkonEssentials implements ModInitializer {
 			(handler, server) -> {
 				AfkManager.onDisconnect(handler.getPlayer());
 				PresenceManager.onDisconnect(handler.getPlayer());
+
+				// Puts them back before the session ends. The return mode is memory-only, so logging out
+				// mid-noclip would otherwise strand them in spectator on their next login.
+				NoclipManager.restore(handler.getPlayer());
 			}
 		);
 
