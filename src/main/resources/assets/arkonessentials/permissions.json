@@ -377,6 +377,22 @@
       "category": "Granting",
       "type": "boolean",
       "default": "operator"
+    },
+    {
+      "node": "arkonessentials.tp.thru",
+      "id": "arkonessentials:tp.thru",
+      "label": "Step Through",
+      "category": "Teleport",
+      "type": "boolean",
+      "default": "operator"
+    },
+    {
+      "node": "arkonessentials.admin.xray",
+      "id": "arkonessentials:admin.xray",
+      "label": "Xray Vision",
+      "category": "Presence",
+      "type": "boolean",
+      "default": "operator"
     }
   ]
 }

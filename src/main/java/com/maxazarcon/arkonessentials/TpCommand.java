@@ -50,6 +50,14 @@ public final class TpCommand {
 	 */
 	private static final double LOOK_RANGE = 256.0;
 
+	/**
+	 * How far {@code /thru} will look for somewhere to land.
+	 *
+	 * <p>Short on purpose. This is for passing through a wall or a hedge, not for travelling — a long
+	 * range would turn a misjudged glance into a teleport across the map.
+	 */
+	private static final double THRU_RANGE = 12.0;
+
 	private TpCommand() {
 	}
 
@@ -159,10 +167,60 @@ public final class TpCommand {
 		);
 
 		dispatcher.register(
+			Commands.literal("thru")
+				.requires(source -> AdminPermissions.check(source, AdminPermissions.TP_THRU))
+				.executes(context -> thru(context.getSource()))
+		);
+
+		dispatcher.register(
 			Commands.literal("top")
 				.requires(source -> AdminPermissions.check(source, AdminPermissions.TP_TOP))
 				.executes(context -> top(context.getSource()))
 		);
+	}
+
+	/**
+	 * Steps the player forward to the nearest spot they could stand on, in the direction they are facing.
+	 *
+	 * <p>Walks outward along the view vector and takes the first position that both fits the player and
+	 * has something solid underfoot. A wall fails the fit test for its whole thickness, so the first
+	 * success is the far side — which is what makes this read as "step through" rather than "step
+	 * forward".
+	 *
+	 * <p>Sampled in half-block steps rather than whole ones: a one-block sample can skip clean over a
+	 * doorway or a gap in a wall, landing you further away than the nearest opening.
+	 */
+	private static int thru(final CommandSourceStack source) throws CommandSyntaxException {
+		ServerPlayer player = source.getPlayerOrException();
+		ServerLevel level = source.getLevel();
+
+		Vec3 eye = player.getEyePosition();
+		Vec3 look = player.getViewVector(1.0F);
+		BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+
+		for (double distance = 1.0; distance <= THRU_RANGE; distance += 0.5) {
+			Vec3 point = eye.add(look.scale(distance));
+			int x = Mth.floor(point.x);
+			int y = Mth.floor(point.y);
+			int z = Mth.floor(point.z);
+
+			// Something to stand on, and room to stand in. Both, or it is a hole rather than a landing.
+			if (!level.getBlockState(cursor.set(x, y - 1, z)).blocksMotion()) {
+				continue;
+			}
+
+			if (!fits(level, player, x, y, z)) {
+				continue;
+			}
+
+			recordBackPoint(player);
+			player.teleportTo(level, x + 0.5, y, z + 0.5, Set.of(), player.getYRot(), player.getXRot(), false);
+			source.sendSuccess(() -> Component.literal("Stepped through.").withStyle(ChatFormatting.GREEN), false);
+			return 1;
+		}
+
+		source.sendFailure(Component.literal("Nowhere to step through to within " + (int) THRU_RANGE + " blocks."));
+		return 0;
 	}
 
 	/** Sends the player to the highest spot in their own column that they can actually stand in. */

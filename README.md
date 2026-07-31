@@ -42,10 +42,27 @@ Seven mutually exclusive states. Only one is active at a time, which is why the 
 | **Ghost** | `/ghost` | yes | yes | untouched | untouched |
 | **Vanish** | `/vanish` | yes | yes | untouched | admin loadout |
 
-**God vs Demigod.** God refuses the hit outright — no damage, no knockback, no harmful effects.
-Demigod lets the whole damage pipeline run, so you still see the hurt animation, knockback and
-particles, and only the health loss is refused. Both pin health and hunger full and spare carried gear
-from durability loss.
+**God vs Demigod.** God refuses the hit outright — no damage, no knockback, no harmful effects, and
+health simply cannot drop.
+
+**Demigod is durable, not invulnerable.** It takes real damage and can be killed. What it gets instead
+is a **regenerating shield** — absorption hearts that soak damage and refill after a pause, sized by
+your experience level:
+
+| | |
+|---|---|
+| Shield size | scales to **+10** (five gold hearts) at level **20** |
+| Refill | 0.5 points per second, starting 5s after the last hit |
+| Unarmoured | **half damage**, so a Demigod caught without gear is still hard to kill |
+| Harmful effects | **half duration** |
+| Wither | replaced by **Resistance** |
+
+The pause after a hit is the point of the design: without it the shield refills faster than anyone can
+spend it, which is invulnerability under another name. All five numbers are config keys
+(`demigodShieldCap`, `demigodShieldLevels`, `demigodShieldRegenPerSecond`,
+`demigodShieldRegenDelaySeconds`).
+
+Both God and Demigod keep hunger frozen and spare carried gear from durability loss.
 
 **Vanish** is for watching without leaving a trace. Invisible, ignored by mobs, fully protected, and —
 unlike every other mode — it **refuses to touch the world**: no item pickups, no breaking, placing,
@@ -109,6 +126,7 @@ exactly what you had before each.
 | `/admin god` | `/godmode`, `/tgm` | Toggle God Mode |
 | `/admin demigod` | `/demigod`, `/dg`, `/tdg` | Toggle Demigod |
 | `/admin ghost` | `/ghost` | Toggle Ghost |
+| `/admin xray` | `/xray` | Outline every player through walls — you only |
 | `/vanish` | | Toggle Vanish — see above |
 | `/nv` | | Toggle night vision (same setting as `/build nv`) |
 | `/build nv` | | Toggle Build Mode night vision (persists) |
@@ -140,6 +158,7 @@ survives a relog but not a full server restart.
 | `/tp <x> <z>` | Teleport to that column, picking a safe height |
 | `/tp <player> <x> <z>` | Send a player to that column |
 | `/top` | Move to the highest standable spot in your column |
+| `/thru` | Step through the wall in front of you |
 | `/tphere <player>` | Bring a player to you |
 | `/tpthere <player>` | Send a player to the block you are looking at |
 | `/tpall` | Send everyone else to the block you are looking at |
@@ -362,6 +381,7 @@ Nodes are `arkonessentials:<node>`, which permission mods usually write dotted:
 | `tp.back` | `/back` |
 | `tp.death` | `/back` also returns to your death location |
 | `tp.top` | `/top` |
+| `tp.thru` | `/thru` |
 | `tp.here` | `/tphere` |
 | `tp.there` | `/tpthere` |
 | `tp.all` | `/tpall` |
@@ -374,6 +394,7 @@ Nodes are `arkonessentials:<node>`, which permission mods usually write dotted:
 | `admin.tp` | `/admin tp`, `/atp`, `/admin back` |
 | `admin.home` | The `/admin home` tier |
 | `admin.see_hidden` | Seeing vanished players |
+| `admin.xray` | `/xray` |
 
 ### Immunities — granted only, never inherited from operator
 

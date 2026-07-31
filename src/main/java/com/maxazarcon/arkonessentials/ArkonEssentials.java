@@ -101,6 +101,10 @@ public class ArkonEssentials implements ModInitializer {
 				return false;
 			}
 
+			// Pauses the Demigod shield's regeneration. Noted even for a hit that is refused below: a
+			// moment's delay costs nothing, and threading the outcome back here would not be worth it.
+			DemigodShield.noteHit(player);
+
 			// The one free landing owed to a player who lost flight mid-air.
 			return !(source.is(DamageTypeTags.IS_FALL) && AdminManager.consumeSoftLanding(player));
 		});
@@ -111,11 +115,17 @@ public class ArkonEssentials implements ModInitializer {
 		// Watches for the idle timeout, and for the activity that ends it.
 		ServerTickEvents.END_SERVER_TICK.register(AfkManager::tick);
 
+		// Keeps each Demigod's shield ceiling in step with their level, and refills it.
+		ServerTickEvents.END_SERVER_TICK.register(DemigodShield::tick);
+
+		// Re-sends the spoofed glow, which any genuine entity-data change would otherwise overwrite.
+		ServerTickEvents.END_SERVER_TICK.register(XrayManager::tick);
+
 		// Backstop for both protected states. Health loss is already refused, but a source that kills
 		// outright rather than by subtraction would otherwise slip straight past that.
 		ServerLivingEntityEvents.ALLOW_DEATH.register(
 			(entity, source, amount) -> !(entity instanceof ServerPlayer player)
-				|| !AdminManager.getState(player).protectsPlayer()
+				|| !AdminManager.getState(player).pinsHealth()
 		);
 
 		// Touched at startup purely so the saved data is read while an operator is still watching the
@@ -142,6 +152,8 @@ public class ArkonEssentials implements ModInitializer {
 				// Puts them back before the session ends. The return mode is memory-only, so logging out
 				// mid-noclip would otherwise strand them in spectator on their next login.
 				NoclipManager.restore(handler.getPlayer());
+				DemigodShield.onDisconnect(handler.getPlayer());
+				XrayManager.onDisconnect(handler.getPlayer());
 			}
 		);
 

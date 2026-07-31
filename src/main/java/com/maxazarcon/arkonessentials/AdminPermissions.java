@@ -36,6 +36,9 @@ public final class AdminPermissions {
 	/** Who can see vanished players. Vanished players always see each other regardless. */
 	public static final Identifier ADMIN_SEE_HIDDEN = node("admin.see_hidden");
 
+	/** {@code /xray} — outline every player through walls, for your eyes only. */
+	public static final Identifier ADMIN_XRAY = node("admin.xray");
+
 	public static final Identifier PASSIVE = node("passive");
 	public static final Identifier BUILD = node("build");
 	public static final Identifier BUILD_NV = node("build.nv");
@@ -58,6 +61,9 @@ public final class AdminPermissions {
 	public static final Identifier TP_DEATH = node("tp.death");
 
 	public static final Identifier TP_TOP = node("tp.top");
+
+	/** {@code /thru} — step through whatever is in front of you. */
+	public static final Identifier TP_THRU = node("tp.thru");
 	public static final Identifier TP_HERE = node("tp.here");
 	public static final Identifier TP_THERE = node("tp.there");
 	public static final Identifier TP_ALL = node("tp.all");
@@ -223,6 +229,7 @@ public final class AdminPermissions {
 		staff(TP_BACK),
 		staff(TP_DEATH),
 		staff(TP_TOP),
+		staff(TP_THRU),
 		staff(TP_HERE),
 		staff(TP_THERE),
 		staff(TP_ALL),
@@ -243,7 +250,8 @@ public final class AdminPermissions {
 		staff(ADMIN_GHOST),
 		staff(ADMIN_TP),
 		staff(ADMIN_HOME),
-		staff(ADMIN_SEE_HIDDEN)
+		staff(ADMIN_SEE_HIDDEN),
+		staff(ADMIN_XRAY)
 	);
 
 	/**

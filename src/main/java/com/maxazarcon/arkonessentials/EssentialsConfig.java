@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.arguments.BoolArgumentType;
+import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import java.io.BufferedReader;
@@ -119,6 +120,28 @@ public final class EssentialsConfig {
 	 */
 	public boolean hideFromWebMaps = true;
 
+	/**
+	 * Largest Demigod shield, in absorption points — two per gold heart. 10 is five hearts.
+	 *
+	 * <p>Sits on top of health rather than replacing armour, so it stacks with whatever the player is
+	 * wearing.
+	 */
+	public double demigodShieldCap = 10.0;
+
+	/** Experience level at which the shield reaches {@link #demigodShieldCap}. It scales linearly to there. */
+	public int demigodShieldLevels = 20;
+
+	/** Absorption points restored per second, once regeneration resumes. */
+	public double demigodShieldRegenPerSecond = 0.5;
+
+	/**
+	 * Seconds after taking a hit before the shield starts refilling again.
+	 *
+	 * <p>The whole reason Demigod is not invulnerable any more. With no pause the pool refills faster
+	 * than anyone can spend it, which is the same thing as immunity wearing a different name.
+	 */
+	public int demigodShieldRegenDelaySeconds = 5;
+
 	/** The configured {@code /fakeleave} state, resolved and validated. */
 	public AdminState fakeLeaveMode() {
 		for (AdminState state : AdminState.values()) {
@@ -167,7 +190,16 @@ public final class EssentialsConfig {
 		Option.ofBool("hideFromPing", c -> c.hideFromPing, (c, v) -> c.hideFromPing = v,
 			"Whether vanished players are left out of the server-list ping count and sample."),
 		Option.ofBool("hideFromWebMaps", c -> c.hideFromWebMaps, (c, v) -> c.hideFromWebMaps = v,
-			"Whether vanished players are hidden on BlueMap and squaremap, when installed.")
+			"Whether vanished players are hidden on BlueMap and squaremap, when installed."),
+		Option.ofDouble("demigodShieldCap", 0.0, 40.0, c -> c.demigodShieldCap, (c, v) -> c.demigodShieldCap = v,
+			"Largest Demigod shield, in absorption points. Two per gold heart."),
+		Option.ofInt("demigodShieldLevels", 1, 100, c -> c.demigodShieldLevels, (c, v) -> c.demigodShieldLevels = v,
+			"Experience level at which the Demigod shield reaches its cap."),
+		Option.ofDouble("demigodShieldRegenPerSecond", 0.0, 20.0, c -> c.demigodShieldRegenPerSecond,
+			(c, v) -> c.demigodShieldRegenPerSecond = v, "Absorption points the Demigod shield restores per second."),
+		Option.ofInt("demigodShieldRegenDelaySeconds", 0, 300, c -> c.demigodShieldRegenDelaySeconds,
+			(c, v) -> c.demigodShieldRegenDelaySeconds = v,
+			"Seconds after a hit before the Demigod shield starts refilling.")
 	);
 
 	public static EssentialsConfig get() {
@@ -213,6 +245,18 @@ public final class EssentialsConfig {
 			final String description
 		) {
 			return new Option<>(key, description, getter, setter, StringArgumentType.greedyString(), String.class);
+		}
+
+		/** A fractional setting. Bounded like the ints, so bad input is refused at parse time. */
+		static Option<Double> ofDouble(
+			final String key,
+			final double min,
+			final double max,
+			final Function<EssentialsConfig, Double> getter,
+			final BiConsumer<EssentialsConfig, Double> setter,
+			final String description
+		) {
+			return new Option<>(key, description, getter, setter, DoubleArgumentType.doubleArg(min, max), Double.class);
 		}
 
 		static Option<Boolean> ofBool(

@@ -205,6 +205,11 @@ public final class AdminManager {
 			restoreOrClear(player, data.takeStash(id, current));
 		}
 
+		// Gold hearts left on someone who is no longer a Demigod would be a free extra life.
+		if (current.hasDemigodShield()) {
+			DemigodShield.clear(player);
+		}
+
 		if (current.grantsNightVision()) {
 			clearBuildPerks(player);
 		}

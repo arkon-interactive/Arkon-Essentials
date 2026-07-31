@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import com.maxazarcon.arkonessentials.EssentialsData.HomeTier;
@@ -126,6 +127,7 @@ public final class AdminCommand {
 				)
 				.then(adminHomeCommand("home"))
 				.then(flyCommand("fly"))
+				.then(xrayCommand("xray"))
 				.then(grantCommand())
 				.then(
 					Commands.literal("revoke")
@@ -168,6 +170,9 @@ public final class AdminCommand {
 		// Every other mode had a root alias; passive did not, which left a passive-only player with no
 		// way to reach it once the /admin root stopped implying full admin.
 		dispatcher.register(stateCommand("passive", AdminState.PASSIVE, AdminPermissions.PASSIVE));
+		// Its own root as well as /admin xray: a surveillance toggle wanted in a hurry.
+		dispatcher.register(xrayCommand("xray"));
+
 		dispatcher.register(homeCommand("home"));
 		dispatcher.register(flyCommand("fly"));
 
@@ -451,6 +456,23 @@ public final class AdminCommand {
 
 		source.sendFailure(Component.literal(target.getGameProfile().name() + " is immune to mode changes."));
 		return true;
+	}
+
+	/** {@code /xray} — outline every player through walls, visible only to the caller. */
+	private static LiteralArgumentBuilder<CommandSourceStack> xrayCommand(final String name) {
+		return Commands.literal(name)
+			.requires(source -> AdminPermissions.check(source, AdminPermissions.ADMIN_XRAY))
+			.executes(context -> {
+				ServerPlayer player = context.getSource().getPlayerOrException();
+				boolean on = XrayManager.toggle(player);
+
+				context.getSource().sendSuccess(
+					() -> Component.literal(on ? "Xray on. Only you see the outlines." : "Xray off.")
+						.withStyle(on ? ChatFormatting.AQUA : ChatFormatting.GRAY),
+					false
+				);
+				return 1;
+			});
 	}
 
 	/**

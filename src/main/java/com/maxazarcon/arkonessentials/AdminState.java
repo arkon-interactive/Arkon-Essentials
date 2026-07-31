@@ -115,7 +115,9 @@ public enum AdminState implements StringRepresentable {
 			case PASSIVE -> "Mobs ignore you. Other players still see you, and you still take damage.";
 			case BUILD -> "Creative on its own loadout, with extended reach and night vision. Deliberately visible to everyone.";
 			case GOD -> "Nothing lands: damage, knockback and harmful effects are all refused. Game mode and inventory untouched. Flight available.";
-			case DEMIGOD -> "Hits land in full — animation, knockback, particles — but never cost you health. Game mode and inventory untouched. Flight if permitted.";
+			case DEMIGOD -> "Durable rather than invulnerable: a shield that refills over time and grows with your XP level, "
+				+ "half damage while unarmoured, harmful effects halved, and Wither turned into Resistance. "
+				+ "Game mode and inventory untouched. Flight if permitted.";
 			case GHOST -> "Invisible God Mode, still in survival. Unseen and untouchable, holding your own gear, game mode untouched. Flight available.";
 			case VANISH -> "Unseen, untouched and leaving no trace: survival with the admin loadout, no damage, no effects, "
 				+ "and item pickups and world interaction both refused. Night vision and flight included. "
@@ -192,6 +194,23 @@ public enum AdminState implements StringRepresentable {
 	/** Health and hunger are pinned full, and carried gear takes no durability damage. */
 	public boolean protectsPlayer() {
 		return this == GOD || this == DEMIGOD || this == GHOST || this == VANISH;
+	}
+
+	/**
+	 * Whether health simply cannot drop.
+	 *
+	 * <p>Split out from {@link #protectsPlayer()} when Demigod stopped being invulnerable. Demigod still
+	 * counts as protected — hunger stays frozen and carried gear is spared — but it now takes real
+	 * damage, soaked by a regenerating shield rather than refused. Pinning its health would make the
+	 * shield decorative.
+	 */
+	public boolean pinsHealth() {
+		return this == GOD || this == GHOST || this == VANISH;
+	}
+
+	/** Whether this state runs the regenerating shield and the softened harmful effects. */
+	public boolean hasDemigodShield() {
+		return this == DEMIGOD;
 	}
 
 	/**

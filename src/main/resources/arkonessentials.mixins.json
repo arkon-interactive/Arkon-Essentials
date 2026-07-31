@@ -3,6 +3,7 @@
 	"minVersion": "0.8",
 	"package": "com.maxazarcon.arkonessentials.mixin",
 	"mixins": [
+		"EntityAccessor",
 		"EntityMixin",
 		"ItemEntityMixin",
 		"ItemStackMixin",
