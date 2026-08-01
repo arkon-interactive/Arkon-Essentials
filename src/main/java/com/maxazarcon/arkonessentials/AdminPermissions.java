@@ -340,6 +340,92 @@ public final class AdminPermissions {
 	}
 
 	/**
+	 * The node that lets someone enter {@code state} themselves.
+	 *
+	 * <p>Not derivable from the state's name — Admin is {@code admin.mode} and Ghost is
+	 * {@code admin.ghost}, while the rest are bare. An exhaustive switch so a new state cannot be added
+	 * without deciding which node gates it.
+	 *
+	 * @return null for {@link AdminState#NONE}, which is the absence of a mode rather than one
+	 */
+	public static Identifier modeNode(final AdminState state) {
+		return switch (state) {
+			case NONE -> null;
+			case ADMIN -> ADMIN_MODE;
+			case PASSIVE -> PASSIVE;
+			case BUILD -> BUILD;
+			case GOD -> GOD;
+			case DEMIGOD -> DEMIGOD;
+			case GHOST -> ADMIN_GHOST;
+			case VANISH -> VANISH;
+		};
+	}
+
+	/**
+	 * What sort of thing a node is, for tools that render it.
+	 *
+	 * <p>The manifest used to say only whether a node existed, which left a consumer unable to tell a
+	 * mutually exclusive mode from an independent toggle, or a permission gate from a config-backed
+	 * value. Those are different controls in a settings UI, and guessing produces switches that look
+	 * right and do nothing.
+	 *
+	 * <p>Derived here rather than written into the manifest by hand, so it cannot drift from behaviour.
+	 */
+	public static String kindOf(final Identifier candidate) {
+		for (Valued valued : VALUED) {
+			if (valued.node().equals(candidate)) {
+				return "value";
+			}
+		}
+
+		// Immunities first: they are checked with no operator fallback, so a tool that groups them with
+		// ordinary staff nodes will show them as enabled for operators when they are not.
+		if (candidate.equals(TP_IMMUNE) || candidate.equals(GRANT_IMMUNE)) {
+			return "immunity";
+		}
+
+		if (candidate.getPath().startsWith("admin.grant.")) {
+			return "grant";
+		}
+
+		return exclusiveGroupOf(candidate) == null ? "ability" : "mode";
+	}
+
+	/**
+	 * The set a node is mutually exclusive within, or null.
+	 *
+	 * <p>Not a convention this declares and hopes is honoured — {@code AdminManager.setState} physically
+	 * permits one state at a time, so the modes really are a radio group and rendering them as
+	 * independent switches would misrepresent what the commands do.
+	 */
+	public static String exclusiveGroupOf(final Identifier candidate) {
+		for (AdminState state : AdminState.values()) {
+			if (candidate.equals(modeNode(state))) {
+				return "mode";
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * The command that grants this node to another player, or null.
+	 *
+	 * <p>Only the modes have one. Everything else is granted through whatever permission provider is
+	 * installed, and there is no mod command for it — so a tool showing a command per toggle would be
+	 * inventing syntax for most of them.
+	 */
+	public static String grantCommandFor(final Identifier candidate) {
+		for (AdminState state : AdminState.values()) {
+			if (state != AdminState.NONE && candidate.equals(modeNode(state))) {
+				return "admin grant " + state.getSerializedName() + " <player>";
+			}
+		}
+
+		return null;
+	}
+
+	/**
 	 * Whether the {@code /admin grant} and {@code /admin revoke} subtree should appear.
 	 *
 	 * <p>Any single mode grant opens it; the per-mode check happens on each mode's own branch, and

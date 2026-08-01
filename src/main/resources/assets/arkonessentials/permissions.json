@@ -1,398 +1,598 @@
 {
-  "schema": 1,
+  "schema": 2,
   "mod": "arkonessentials",
   "namespace": "arkonessentials",
-  "notes": "Declared permission surface, for permission managers and launchers. 'node' is the dotted form permission mods use; 'id' is the namespaced identifier the mod checks. 'default' is what applies when nothing grants or denies the node: public = allowed, operator = granted or op level, config = taken from the named server setting, denied = only an explicit grant. Dotted children inherit from their parent, so granting a parent grants its children unless a child is denied explicitly.",
+  "notes": "Declared permission surface, for permission managers and launchers. 'node' is the dotted form permission mods grant; 'id' is the namespaced identifier the mod checks. 'default' is what applies when nothing grants or denies the node: public = allowed, operator = granted or op level, config = taken from the named setting, denied = only an explicit grant. 'kind' separates modes (mutually exclusive states), abilities, values (config-backed, carrying a number or flag rather than a yes/no), immunities (protections with no operator fallback) and grants. 'parent' is UI nesting and is declared, not derived from dots; 'inheritsFrom' is the dotted ancestor a permission mod would grant to turn this on, which is a different and purely lexical relationship.",
   "permissions": [
     {
       "node": "arkonessentials.tps",
       "id": "arkonessentials:tps",
       "label": "Server TPS",
+      "description": "Read the server's ticks per second.",
       "category": "Public",
+      "kind": "ability",
       "type": "boolean",
-      "default": "public"
+      "default": "public",
+      "command": "/tps"
     },
     {
       "node": "arkonessentials.ping",
       "id": "arkonessentials:ping",
       "label": "Ping",
+      "description": "Read your own or another player's latency.",
       "category": "Public",
+      "kind": "ability",
       "type": "boolean",
-      "default": "public"
+      "default": "public",
+      "command": "/ping"
     },
     {
       "node": "arkonessentials.mode",
       "id": "arkonessentials:mode",
       "label": "Show Current Mode",
+      "description": "Show your current mode and what it does.",
       "category": "Public",
+      "kind": "ability",
       "type": "boolean",
-      "default": "public"
+      "default": "public",
+      "command": "/mode"
     },
     {
       "node": "arkonessentials.home",
       "id": "arkonessentials:home",
       "label": "Home",
+      "description": "Teleport to your home, which is your respawn point.",
       "category": "Homes",
+      "kind": "ability",
       "type": "boolean",
-      "default": "public"
+      "default": "public",
+      "command": "/home"
     },
     {
       "node": "arkonessentials.home.named",
       "id": "arkonessentials:home.named",
       "label": "Named Homes",
+      "description": "Keep more than one home, by name.",
       "category": "Homes",
+      "kind": "ability",
       "type": "boolean",
       "default": "config",
-      "configKey": "playerNamedHomes"
+      "configKey": "playerNamedHomes",
+      "parent": "arkonessentials.home",
+      "inheritsFrom": "arkonessentials.home",
+      "command": "/home set <name>"
     },
     {
       "node": "arkonessentials.home.limit",
       "id": "arkonessentials:home.limit",
       "label": "Home Limit",
+      "description": "How many homes you may keep. Falls back to the playerHomes setting.",
       "category": "Homes",
+      "kind": "value",
       "type": "integer",
       "default": "config",
-      "configKey": "playerHomes"
+      "configKey": "playerHomes",
+      "parent": "arkonessentials.home",
+      "inheritsFrom": "arkonessentials.home"
     },
     {
       "node": "arkonessentials.admin.home",
       "id": "arkonessentials:admin.home",
       "label": "Staff Homes",
+      "description": "A separate set of staff homes, named only, never touching your spawn.",
       "category": "Homes",
+      "kind": "ability",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "inheritsFrom": "arkonessentials.admin",
+      "command": "/admin home <name>"
     },
     {
       "node": "arkonessentials.admin.home.limit",
       "id": "arkonessentials:admin.home.limit",
       "label": "Staff Home Limit",
+      "description": "How many staff homes you may keep. Falls back to the adminHomes setting.",
       "category": "Homes",
+      "kind": "value",
       "type": "integer",
       "default": "config",
-      "configKey": "adminHomes"
+      "configKey": "adminHomes",
+      "parent": "arkonessentials.admin.home",
+      "inheritsFrom": "arkonessentials.admin.home"
     },
     {
       "node": "arkonessentials.afk",
       "id": "arkonessentials:afk",
       "label": "AFK",
+      "description": "Mark yourself away. Freezes hunger and makes mobs ignore you.",
       "category": "Presence",
+      "kind": "ability",
       "type": "boolean",
-      "default": "public"
+      "default": "public",
+      "command": "/afk"
     },
     {
       "node": "arkonessentials.afk.reason",
       "id": "arkonessentials:afk.reason",
       "label": "AFK Reason",
+      "description": "Attach a free-text reason to the AFK announcement.",
       "category": "Presence",
+      "kind": "ability",
       "type": "boolean",
       "default": "config",
-      "configKey": "afkReasonsAvailable"
+      "configKey": "afkReasonsAvailable",
+      "parent": "arkonessentials.afk",
+      "inheritsFrom": "arkonessentials.afk",
+      "command": "/afk <reason>"
     },
     {
       "node": "arkonessentials.afk.toggle",
       "id": "arkonessentials:afk.toggle",
       "label": "Toggle Auto-AFK",
+      "description": "Turn the automatic idle timer off for yourself.",
       "category": "Presence",
+      "kind": "ability",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "parent": "arkonessentials.afk",
+      "inheritsFrom": "arkonessentials.afk",
+      "command": "/afkon | /afkoff"
     },
     {
       "node": "arkonessentials.fake.leave",
       "id": "arkonessentials:fake.leave",
       "label": "Fake Leave",
+      "description": "Broadcast a leave message and enter a mode without actually leaving.",
       "category": "Presence",
+      "kind": "ability",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "inheritsFrom": "arkonessentials.fake",
+      "command": "/fakeleave [mode]"
     },
     {
       "node": "arkonessentials.fake.join",
       "id": "arkonessentials:fake.join",
       "label": "Fake Join",
+      "description": "Broadcast a join message. Changes nothing else.",
       "category": "Presence",
+      "kind": "ability",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "inheritsFrom": "arkonessentials.fake",
+      "command": "/fakejoin"
     },
     {
       "node": "arkonessentials.admin.see_hidden",
       "id": "arkonessentials:admin.see_hidden",
       "label": "See Vanished Players",
+      "description": "See vanished players. They always see each other regardless.",
       "category": "Presence",
+      "kind": "ability",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "inheritsFrom": "arkonessentials.admin"
     },
     {
       "node": "arkonessentials.passive",
       "id": "arkonessentials:passive",
       "label": "Passive Mode",
+      "description": "Mobs ignore you. Other players still see you, and you still take damage.",
       "category": "Modes",
+      "kind": "mode",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "exclusiveGroup": "mode",
+      "command": "/passive",
+      "grantCommand": "/admin grant passive <player>",
+      "revokeCommand": "/admin revoke <player>"
     },
     {
       "node": "arkonessentials.build",
       "id": "arkonessentials:build",
       "label": "Build Mode",
+      "description": "Creative on its own loadout, with extended reach and night vision. Deliberately visible.",
       "category": "Modes",
+      "kind": "mode",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "exclusiveGroup": "mode",
+      "command": "/build",
+      "grantCommand": "/admin grant build <player>",
+      "revokeCommand": "/admin revoke <player>"
     },
     {
       "node": "arkonessentials.build.nv",
       "id": "arkonessentials:build.nv",
       "label": "Build Night Vision",
+      "description": "Toggle Build Mode's night vision.",
       "category": "Modes",
+      "kind": "ability",
       "type": "boolean",
       "default": "config",
-      "configKey": "buildNightVisionAvailable"
+      "configKey": "buildNightVisionAvailable",
+      "parent": "arkonessentials.build",
+      "inheritsFrom": "arkonessentials.build",
+      "command": "/nv"
     },
     {
       "node": "arkonessentials.build.reach",
       "id": "arkonessentials:build.reach",
       "label": "Build Reach",
+      "description": "Set your Build Mode reach bonus.",
       "category": "Modes",
+      "kind": "ability",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "parent": "arkonessentials.build",
+      "inheritsFrom": "arkonessentials.build",
+      "command": "/build reach <0-10>"
     },
     {
       "node": "arkonessentials.god",
       "id": "arkonessentials:god",
       "label": "God Mode",
+      "description": "Nothing lands: damage, knockback and harmful effects are all refused.",
       "category": "Modes",
+      "kind": "mode",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "exclusiveGroup": "mode",
+      "command": "/godmode",
+      "grantCommand": "/admin grant god <player>",
+      "revokeCommand": "/admin revoke <player>"
     },
     {
       "node": "arkonessentials.demigod",
       "id": "arkonessentials:demigod",
       "label": "Demigod",
+      "description": "Durable rather than invulnerable. A shield that refills and grows with XP level, half damage unarmoured, harmful effects halved, Wither turned into Resistance.",
       "category": "Modes",
+      "kind": "mode",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "exclusiveGroup": "mode",
+      "command": "/demigod",
+      "grantCommand": "/admin grant demigod <player>",
+      "revokeCommand": "/admin revoke <player>"
     },
     {
       "node": "arkonessentials.vanish",
       "id": "arkonessentials:vanish",
       "label": "Vanish",
+      "description": "Unseen and leaving no trace: survival with the admin loadout, no pickups and no world interaction.",
       "category": "Modes",
+      "kind": "mode",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "exclusiveGroup": "mode",
+      "command": "/vanish",
+      "grantCommand": "/admin grant vanish <player>",
+      "revokeCommand": "/admin revoke <player>"
     },
     {
       "node": "arkonessentials.admin.mode",
       "id": "arkonessentials:admin.mode",
       "label": "Admin Mode",
+      "description": "Vanished from players and mobs, in creative, on the admin loadout.",
       "category": "Modes",
+      "kind": "mode",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "inheritsFrom": "arkonessentials.admin",
+      "exclusiveGroup": "mode",
+      "command": "/admin",
+      "grantCommand": "/admin grant admin <player>",
+      "revokeCommand": "/admin revoke <player>"
     },
     {
       "node": "arkonessentials.admin.ghost",
       "id": "arkonessentials:admin.ghost",
       "label": "Ghost",
+      "description": "Invisible God Mode, still in survival with your own gear.",
       "category": "Modes",
+      "kind": "mode",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "inheritsFrom": "arkonessentials.admin",
+      "exclusiveGroup": "mode",
+      "command": "/ghost",
+      "grantCommand": "/admin grant ghost <player>",
+      "revokeCommand": "/admin revoke <player>"
     },
     {
       "node": "arkonessentials.fly",
       "id": "arkonessentials:fly",
       "label": "Flight",
+      "description": "Toggle flight. A perk of the god tier; Admin and Build already fly through creative.",
       "category": "Movement",
+      "kind": "ability",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "command": "/fly"
     },
     {
       "node": "arkonessentials.fly.speed",
       "id": "arkonessentials:fly.speed",
       "label": "Flight Speed",
+      "description": "Tune the flight speed multiplier. Separate from being allowed to fly.",
       "category": "Movement",
+      "kind": "ability",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "parent": "arkonessentials.fly",
+      "inheritsFrom": "arkonessentials.fly",
+      "command": "/fly speed <1-5>"
     },
     {
       "node": "arkonessentials.fly.demigod",
       "id": "arkonessentials:fly.demigod",
       "label": "Demigod Flight",
+      "description": "Whether Demigod grants flight. Falls back to the demigodFlight setting.",
       "category": "Movement",
+      "kind": "value",
       "type": "boolean",
       "default": "config",
-      "configKey": "demigodFlight"
+      "configKey": "demigodFlight",
+      "parent": "arkonessentials.fly",
+      "inheritsFrom": "arkonessentials.fly"
     },
     {
       "node": "arkonessentials.vanish.noclip",
       "id": "arkonessentials:vanish.noclip",
       "label": "Noclip",
+      "description": "Fly through blocks. Uses spectator, so no hotbar and no interaction while active.",
       "category": "Movement",
+      "kind": "ability",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "parent": "arkonessentials.vanish",
+      "inheritsFrom": "arkonessentials.vanish",
+      "command": "/noclip"
     },
     {
       "node": "arkonessentials.tp",
       "id": "arkonessentials:tp",
       "label": "Teleport to Player",
+      "description": "Teleport yourself to a player.",
       "category": "Teleport",
+      "kind": "ability",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "command": "/tp <player>"
     },
     {
       "node": "arkonessentials.tp.others",
       "id": "arkonessentials:tp.others",
       "label": "Teleport Others",
+      "description": "Teleport one player to another.",
       "category": "Teleport",
+      "kind": "ability",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "parent": "arkonessentials.tp",
+      "inheritsFrom": "arkonessentials.tp",
+      "command": "/tp <player> <player>"
     },
     {
       "node": "arkonessentials.tp.coords",
       "id": "arkonessentials:tp.coords",
       "label": "Teleport to Coordinates",
+      "description": "Teleport to coordinates.",
       "category": "Teleport",
+      "kind": "ability",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "parent": "arkonessentials.tp",
+      "inheritsFrom": "arkonessentials.tp",
+      "command": "/tp <x> <y> <z>"
     },
     {
       "node": "arkonessentials.tp.back",
       "id": "arkonessentials:tp.back",
       "label": "Return",
+      "description": "Return to where you last teleported from.",
       "category": "Teleport",
+      "kind": "ability",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "parent": "arkonessentials.tp",
+      "inheritsFrom": "arkonessentials.tp",
+      "command": "/back"
     },
     {
       "node": "arkonessentials.tp.death",
       "id": "arkonessentials:tp.death",
       "label": "Return to Death",
+      "description": "Make /back also return you to where you died.",
       "category": "Teleport",
+      "kind": "ability",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "parent": "arkonessentials.tp",
+      "inheritsFrom": "arkonessentials.tp"
     },
     {
       "node": "arkonessentials.tp.top",
       "id": "arkonessentials:tp.top",
       "label": "Teleport to Surface",
+      "description": "Move to the highest standable spot in your column.",
       "category": "Teleport",
+      "kind": "ability",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "parent": "arkonessentials.tp",
+      "inheritsFrom": "arkonessentials.tp",
+      "command": "/top"
     },
     {
       "node": "arkonessentials.tp.here",
       "id": "arkonessentials:tp.here",
       "label": "Summon Player",
+      "description": "Bring a player to you.",
       "category": "Teleport",
+      "kind": "ability",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "parent": "arkonessentials.tp",
+      "inheritsFrom": "arkonessentials.tp",
+      "command": "/tphere <player>"
     },
     {
       "node": "arkonessentials.tp.there",
       "id": "arkonessentials:tp.there",
       "label": "Send Player",
+      "description": "Send a player to the block you are looking at.",
       "category": "Teleport",
+      "kind": "ability",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "parent": "arkonessentials.tp",
+      "inheritsFrom": "arkonessentials.tp",
+      "command": "/tpthere <player>"
     },
     {
       "node": "arkonessentials.tp.all",
       "id": "arkonessentials:tp.all",
       "label": "Summon Everyone",
+      "description": "Send everyone else to the block you are looking at.",
       "category": "Teleport",
+      "kind": "ability",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "parent": "arkonessentials.tp",
+      "inheritsFrom": "arkonessentials.tp",
+      "command": "/tpall"
     },
     {
       "node": "arkonessentials.admin.tp",
       "id": "arkonessentials:admin.tp",
       "label": "Staff Teleport",
+      "description": "Staff teleport: saves a return point and forces Admin Mode.",
       "category": "Teleport",
+      "kind": "ability",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "inheritsFrom": "arkonessentials.admin",
+      "command": "/atp <player>"
     },
     {
       "node": "arkonessentials.tp.immune",
       "id": "arkonessentials:tp.immune",
       "label": "Teleport Immunity",
+      "description": "Cannot be teleported by anyone else. Granted only; operators are not immune by default.",
       "category": "Immunity",
+      "kind": "immunity",
       "type": "boolean",
-      "default": "denied"
+      "default": "denied",
+      "parent": "arkonessentials.tp",
+      "inheritsFrom": "arkonessentials.tp"
     },
     {
       "node": "arkonessentials.admin.grant.immune",
       "id": "arkonessentials:admin.grant.immune",
       "label": "Grant Immunity",
+      "description": "Cannot have a mode granted or revoked by anyone else. Granted only.",
       "category": "Immunity",
+      "kind": "immunity",
       "type": "boolean",
-      "default": "denied"
+      "default": "denied",
+      "inheritsFrom": "arkonessentials.admin.grant"
     },
     {
       "node": "arkonessentials.admin.grant.admin",
       "id": "arkonessentials:admin.grant.admin",
       "label": "Grant Admin Mode",
       "category": "Granting",
+      "kind": "grant",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "inheritsFrom": "arkonessentials.admin.grant"
     },
     {
       "node": "arkonessentials.admin.grant.passive",
       "id": "arkonessentials:admin.grant.passive",
       "label": "Grant Passive Mode",
       "category": "Granting",
+      "kind": "grant",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "inheritsFrom": "arkonessentials.admin.grant"
     },
     {
       "node": "arkonessentials.admin.grant.build",
       "id": "arkonessentials:admin.grant.build",
       "label": "Grant Build Mode",
       "category": "Granting",
+      "kind": "grant",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "inheritsFrom": "arkonessentials.admin.grant"
     },
     {
       "node": "arkonessentials.admin.grant.god",
       "id": "arkonessentials:admin.grant.god",
       "label": "Grant God Mode",
       "category": "Granting",
+      "kind": "grant",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "inheritsFrom": "arkonessentials.admin.grant"
     },
     {
       "node": "arkonessentials.admin.grant.demigod",
       "id": "arkonessentials:admin.grant.demigod",
       "label": "Grant Demigod",
       "category": "Granting",
+      "kind": "grant",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "inheritsFrom": "arkonessentials.admin.grant"
     },
     {
       "node": "arkonessentials.admin.grant.ghost",
       "id": "arkonessentials:admin.grant.ghost",
       "label": "Grant Ghost",
       "category": "Granting",
+      "kind": "grant",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "inheritsFrom": "arkonessentials.admin.grant"
     },
     {
       "node": "arkonessentials.admin.grant.vanish",
       "id": "arkonessentials:admin.grant.vanish",
       "label": "Grant Vanish",
       "category": "Granting",
+      "kind": "grant",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "inheritsFrom": "arkonessentials.admin.grant"
     },
     {
       "node": "arkonessentials.tp.thru",
       "id": "arkonessentials:tp.thru",
       "label": "Step Through",
+      "description": "Step through the wall in front of you.",
       "category": "Teleport",
+      "kind": "ability",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "parent": "arkonessentials.tp",
+      "inheritsFrom": "arkonessentials.tp",
+      "command": "/thru"
     },
     {
       "node": "arkonessentials.admin.xray",
       "id": "arkonessentials:admin.xray",
       "label": "Xray Vision",
+      "description": "Outline every player through walls. Visible only to you.",
       "category": "Presence",
+      "kind": "ability",
       "type": "boolean",
-      "default": "operator"
+      "default": "operator",
+      "inheritsFrom": "arkonessentials.admin",
+      "command": "/xray"
     }
   ]
 }

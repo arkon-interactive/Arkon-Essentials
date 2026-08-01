@@ -40,3 +40,4 @@ run/
 logs/
 crash-reports/
 mods/
+.aider*

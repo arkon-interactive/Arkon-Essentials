@@ -438,8 +438,43 @@ the same thing either way. `default` is what applies when nothing grants or deni
 `operator`, `config` (with `configKey` naming the setting) or `denied`. `type` is `boolean` except for
 the valued nodes, which carry a number or a flag.
 
-A build-time test compares this file against the code in both directions, so it cannot drift out of
-date — a node added without a manifest entry fails the build.
+Schema 2 adds the fields a granting UI needs, all additive so a schema 1 reader keeps working:
+
+| Field | Meaning |
+|---|---|
+| `kind` | `mode` / `ability` / `value` / `immunity` / `grant` — the four render differently |
+| `parent` | UI nesting, **declared** rather than derived from dots |
+| `inheritsFrom` | the dotted ancestor a permission mod grants to turn this on |
+| `exclusiveGroup` | `mode` on the seven states, which are mutually exclusive by construction |
+| `command` | what the holder types, where there is one |
+| `grantCommand` | how staff give it to someone — only the modes have one |
+| `description` | human text |
+
+**`parent` and `inheritsFrom` are different relationships and they disagree.** Permission inheritance is
+purely lexical: granting `arkonessentials.fly` really does grant `fly.demigod`. But `fly.demigod` is a
+config-backed *value*, not a child toggle — so it nests under Flight in a UI while not being a switch at
+all. Deriving either one from the dots gets the other wrong.
+
+**Only the seven modes have a `grantCommand`.** Everything else is granted through your permission mod;
+there is no command for it. Treat a missing `grantCommand` as "this is a permission grant", not as a gap.
+
+A build-time test compares both files against the code in both directions, so they cannot drift out of
+date — a node added without a manifest entry fails the build, and so does a stale entry left behind.
+
+### Reading the settings list programmatically
+
+`assets/arkonessentials/settings.json` declares every key `/arkon config` can edit:
+
+```json
+{ "key": "afkTimeoutSeconds", "label": "Idle Timeout", "category": "AFK",
+  "description": "Seconds of inactivity before a player goes AFK automatically. 0 disables the timer.",
+  "type": "integer", "default": 90, "min": 0, "max": 3600,
+  "command": "/arkon config afkTimeoutSeconds <value>" }
+```
+
+Descriptions are the same strings the command prints, and bounds are the real ones the command enforces
+— both compared against the code by the same build test, so a UI built on this cannot offer a value the
+server will refuse.
 
 ### Reading player latency programmatically
 

@@ -116,6 +116,108 @@ class PermissionsManifestTest {
 		assertTrue(mismatched.isEmpty(), "manifest misstates these defaults: " + mismatched);
 	}
 
+	/**
+	 * Schema 2's {@code kind} has to agree with the code, because a consumer renders each kind
+	 * differently — a value is a number field, an immunity defaults the opposite way to everything else,
+	 * and a mode is one of a mutually exclusive set.
+	 *
+	 * <p>The two checkable against code are {@code value} and {@code grant}: both are generated from
+	 * {@link AdminPermissions#VALUED} and {@link AdminState} rather than listed by hand, so a mismatch
+	 * means the manifest has fallen behind a real change.
+	 */
+	@Test
+	void kindsAgreeWithTheCode() {
+		Map<String, String> kinds = new TreeMap<>();
+
+		manifest().getAsJsonArray("permissions").forEach(element -> {
+			JsonObject entry = element.getAsJsonObject();
+			String path = entry.get("id").getAsString().split(":", 2)[1];
+
+			assertTrue(entry.has("kind"), "no kind declared for " + path);
+			kinds.put(path, entry.get("kind").getAsString());
+		});
+
+		Set<String> declaredValues = new TreeSet<>();
+		Set<String> declaredGrants = new TreeSet<>();
+		Set<String> declaredModes = new TreeSet<>();
+
+		kinds.forEach((path, kind) -> {
+			assertTrue(
+				Set.of("mode", "ability", "value", "immunity", "grant").contains(kind),
+				"unknown kind '" + kind + "' on " + path
+			);
+
+			switch (kind) {
+				case "value" -> declaredValues.add(path);
+				case "grant" -> declaredGrants.add(path);
+				case "mode" -> declaredModes.add(path);
+				default -> { }
+			}
+		});
+
+		Set<String> actualValues = new TreeSet<>();
+		AdminPermissions.VALUED.forEach(valued -> actualValues.add(valued.node().getPath()));
+		assertEquals(actualValues, declaredValues, "kind:value must be exactly the config-backed nodes");
+
+		Set<String> actualGrants = new TreeSet<>();
+		for (AdminState state : AdminState.values()) {
+			if (state != AdminState.NONE) {
+				actualGrants.add(AdminPermissions.grantNode(state).getPath());
+			}
+		}
+		assertEquals(actualGrants, declaredGrants, "kind:grant must be exactly the generated grant nodes");
+
+		// One mode node per state, so a new state cannot be added without declaring its toggle.
+		assertEquals(
+			AdminState.values().length - 1, declaredModes.size(),
+			"expected one kind:mode node per state, got " + declaredModes
+		);
+	}
+
+	/**
+	 * Every mode is in the same exclusive group, and nothing else claims to be.
+	 *
+	 * <p>This is what lets a launcher render Modes as a radio set. It is not a convention — the states
+	 * are mutually exclusive by construction, since {@code setState} permits exactly one at a time.
+	 */
+	@Test
+	void modesDeclareOneExclusiveGroup() {
+		manifest().getAsJsonArray("permissions").forEach(element -> {
+			JsonObject entry = element.getAsJsonObject();
+			String path = entry.get("id").getAsString().split(":", 2)[1];
+			boolean isMode = "mode".equals(entry.get("kind").getAsString());
+
+			assertEquals(
+				isMode, entry.has("exclusiveGroup"),
+				"exclusiveGroup belongs on modes and only on modes; wrong for " + path
+			);
+
+			if (isMode) {
+				assertEquals("mode", entry.get("exclusiveGroup").getAsString(), "wrong group on " + path);
+				assertTrue(entry.has("grantCommand"), "a mode should say how to grant it: " + path);
+			}
+		});
+	}
+
+	/** A {@code parent} that names a node which does not exist would nest a toggle under nothing. */
+	@Test
+	void parentsPointAtRealNodes() {
+		Set<String> nodes = new TreeSet<>();
+		manifest().getAsJsonArray("permissions")
+			.forEach(element -> nodes.add(element.getAsJsonObject().get("node").getAsString()));
+
+		manifest().getAsJsonArray("permissions").forEach(element -> {
+			JsonObject entry = element.getAsJsonObject();
+
+			if (entry.has("parent")) {
+				assertTrue(
+					nodes.contains(entry.get("parent").getAsString()),
+					entry.get("id").getAsString() + " nests under a node that is not declared: " + entry.get("parent").getAsString()
+				);
+			}
+		});
+	}
+
 	/** Every node needs a label and a category, or the launcher has nothing to draw. */
 	@Test
 	void everyEntryIsPresentable() {

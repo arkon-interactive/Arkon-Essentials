@@ -1,0 +1,197 @@
+{
+  "schema": 1,
+  "mod": "arkonessentials",
+  "file": "config/arkonessentials.json",
+  "notes": "Every setting /arkon config can edit, with the label, description, type and bounds the command itself uses. Descriptions are the same strings the command prints, compared by a build test so they cannot drift. Editing the file directly works too; /arkon reload re-reads it.",
+  "settings": [
+    {
+      "key": "playerHomes",
+      "label": "Player Homes",
+      "description": "How many homes an ordinary player may keep. 0 disables /home.",
+      "category": "Homes",
+      "type": "integer",
+      "default": 1,
+      "command": "/arkon config playerHomes <value>",
+      "min": 0,
+      "max": 64
+    },
+    {
+      "key": "playerNamedHomes",
+      "label": "Named Homes",
+      "description": "Whether ordinary players may name homes.",
+      "category": "Homes",
+      "type": "boolean",
+      "default": false,
+      "command": "/arkon config playerNamedHomes <value>"
+    },
+    {
+      "key": "adminHomes",
+      "label": "Staff Homes",
+      "description": "How many named homes an admin may keep under /admin home.",
+      "category": "Homes",
+      "type": "integer",
+      "default": 5,
+      "command": "/arkon config adminHomes <value>",
+      "min": 0,
+      "max": 64
+    },
+    {
+      "key": "defaultBuildReach",
+      "label": "Default Build Reach",
+      "description": "Build Mode reach bonus for players who have not set their own.",
+      "category": "Build",
+      "type": "integer",
+      "default": 4,
+      "command": "/arkon config defaultBuildReach <value>",
+      "min": 0,
+      "max": 10
+    },
+    {
+      "key": "buildNightVisionAvailable",
+      "label": "Night Vision Available",
+      "description": "When false, /build nv requires the arkonessentials:build_nv permission.",
+      "category": "Build",
+      "type": "boolean",
+      "default": true,
+      "command": "/arkon config buildNightVisionAvailable <value>"
+    },
+    {
+      "key": "defaultFlySpeed",
+      "label": "Default Flight Speed",
+      "description": "Flight speed multiplier for players who have not set their own.",
+      "category": "Movement",
+      "type": "integer",
+      "default": 2,
+      "command": "/arkon config defaultFlySpeed <value>",
+      "min": 1,
+      "max": 5
+    },
+    {
+      "key": "demigodFlight",
+      "label": "Demigod Flight",
+      "description": "Whether Demigod grants flight. God and Ghost always do.",
+      "category": "Movement",
+      "type": "boolean",
+      "default": false,
+      "command": "/arkon config demigodFlight <value>"
+    },
+    {
+      "key": "afkTimeoutSeconds",
+      "label": "Idle Timeout",
+      "description": "Seconds of inactivity before a player goes AFK automatically. 0 disables the timer.",
+      "category": "AFK",
+      "type": "integer",
+      "default": 90,
+      "command": "/arkon config afkTimeoutSeconds <value>",
+      "min": 0,
+      "max": 3600
+    },
+    {
+      "key": "afkMessage",
+      "label": "AFK Message",
+      "description": "Announcement for going AFK. %s is the player's name.",
+      "category": "AFK",
+      "type": "string",
+      "default": "%s has gone AFK!",
+      "command": "/arkon config afkMessage <value>"
+    },
+    {
+      "key": "afkReasonMessage",
+      "label": "AFK Message With Reason",
+      "description": "Announcement for going AFK with a reason. First %s is the name, second the reason.",
+      "category": "AFK",
+      "type": "string",
+      "default": "%s has gone AFK. Reason: %s",
+      "command": "/arkon config afkReasonMessage <value>"
+    },
+    {
+      "key": "afkReturnMessage",
+      "label": "AFK Return Message",
+      "description": "Announcement for returning from AFK. %s is the player's name.",
+      "category": "AFK",
+      "type": "string",
+      "default": "%s is no longer AFK.",
+      "command": "/arkon config afkReturnMessage <value>"
+    },
+    {
+      "key": "afkReasonsAvailable",
+      "label": "Reasons Available",
+      "description": "When false, /afk <reason> requires the arkonessentials:afk.reason permission.",
+      "category": "AFK",
+      "type": "boolean",
+      "default": true,
+      "command": "/arkon config afkReasonsAvailable <value>"
+    },
+    {
+      "key": "fakeLeaveDefaultMode",
+      "label": "Fake Leave Mode",
+      "description": "State /fakeleave uses when none is named. Any state, including none. Unknown values fall back to ghost.",
+      "category": "Presence",
+      "type": "string",
+      "default": "ghost",
+      "command": "/arkon config fakeLeaveDefaultMode <value>"
+    },
+    {
+      "key": "hideFromPing",
+      "label": "Hide From Server Ping",
+      "description": "Whether vanished players are left out of the server-list ping count and sample.",
+      "category": "Presence",
+      "type": "boolean",
+      "default": true,
+      "command": "/arkon config hideFromPing <value>"
+    },
+    {
+      "key": "hideFromWebMaps",
+      "label": "Hide From Web Maps",
+      "description": "Whether vanished players are hidden on BlueMap and squaremap, when installed.",
+      "category": "Presence",
+      "type": "boolean",
+      "default": true,
+      "command": "/arkon config hideFromWebMaps <value>"
+    },
+    {
+      "key": "demigodShieldCap",
+      "label": "Shield Cap",
+      "description": "Largest Demigod shield, in absorption points. Two per gold heart.",
+      "category": "Demigod",
+      "type": "number",
+      "default": 10.0,
+      "command": "/arkon config demigodShieldCap <value>",
+      "min": 0.0,
+      "max": 40.0
+    },
+    {
+      "key": "demigodShieldLevels",
+      "label": "Shield Levels To Cap",
+      "description": "Experience level at which the Demigod shield reaches its cap.",
+      "category": "Demigod",
+      "type": "integer",
+      "default": 20,
+      "command": "/arkon config demigodShieldLevels <value>",
+      "min": 1,
+      "max": 100
+    },
+    {
+      "key": "demigodShieldRegenPerSecond",
+      "label": "Shield Regen Rate",
+      "description": "Absorption points the Demigod shield restores per second.",
+      "category": "Demigod",
+      "type": "number",
+      "default": 0.5,
+      "command": "/arkon config demigodShieldRegenPerSecond <value>",
+      "min": 0.0,
+      "max": 20.0
+    },
+    {
+      "key": "demigodShieldRegenDelaySeconds",
+      "label": "Shield Regen Delay",
+      "description": "Seconds after a hit before the Demigod shield starts refilling.",
+      "category": "Demigod",
+      "type": "integer",
+      "default": 5,
+      "command": "/arkon config demigodShieldRegenDelaySeconds <value>",
+      "min": 0,
+      "max": 300
+    }
+  ]
+}
