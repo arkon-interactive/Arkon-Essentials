@@ -369,6 +369,36 @@ Nodes are deliberately **siblings**: `tp`, `tp.others`, `tp.coords`, `tp.back`, 
 `/back` grant, since a dotted child inherits from its parent — a child cannot be stricter than its
 parent.
 
+### `/give` takes the `/give` name, and the argument type is the interesting part
+
+`GiveCommandMixin` `@Redirect`s the single `dispatcher.register` call in vanilla's `GiveCommand#register`
+and returns null (discarded at the call site). Same reason as `/tp`: vanilla's `/give` takes a **player
+first**, a player argument accepts any bare word, and Brigadier merges same-named literals keeping the
+existing node's children ahead of new ones — so `/give cobble` would look for a player called "cobble" no
+matter what branches were added alongside. Every vanilla form is reimplemented, so nothing is lost.
+
+Within our own tree the **item branch is registered before the player branch**, for the same
+insertion-order reason as `/tp`: a bad item name falls through to the player branch harmlessly, but a
+player name would masquerade as an item if the order were reversed.
+
+**The item argument is `IdentifierArgument.id()`, and the alternatives are all worse.**
+`StringArgumentType.word()` rejects a colon, putting every namespaced id — every modded item on the
+server — out of reach; that was the first version and an RCON probe caught it (`/giveall minecraft:tnt`
+answered "Expected whitespace to end one argument"). A **custom** `ArgumentType` reading to whitespace
+would accept everything, but custom types have to be registered on both sides or the command tree fails
+to serialise — which breaks exactly the vanilla clients this mod promises to require nothing of.
+`IdentifierArgument` is a vanilla type that accepts `:`, `/`, `.` and `-`. Its one cost is that input must
+be lowercase, which is what vanilla's own `/give` demands anyway.
+
+`resolve` matches exact id → `startsWith` → `contains`, shortest path winning inside each tier — that last
+rule is what makes `cobble` land on `cobblestone` rather than `cobblestone_stairs`. It is deliberately
+**substring matching, not edit distance**: `diamnd` returns nothing. Guessing at a typo is how a command
+hands someone the wrong item without saying so.
+
+`giveDefaultCount` (64) applies when no count is given. Counts above a stack are split into stack-sized
+pieces the way vanilla does; anything that will not fit is dropped at the player and reserved to them via
+`setTarget`, rather than discarded.
+
 ### Immunities invert the permission model
 
 `tp.immune` and `admin.grant.immune` are checked with **`AdminPermissions.checkStrict`**, which is
@@ -575,7 +605,7 @@ reports the *old* path even after you export the new one. `./gradlew --stop` fir
 ```
 
 ```bash
-./gradlew test                  # codec round-trip tests (also run by plain `build`)
+./gradlew test                  # codec, manifest and mixin-application tests (also run by plain `build`)
 ```
 
 ### Codec tests
@@ -606,21 +636,33 @@ Mixin application is additionally checked at runtime — see below.
 
 **Compiling proves nothing about mixins.** They are matched by method descriptor at class load, so a
 wrong `@Redirect` target or `@Shadow` signature fails only when the target class is first loaded.
-After any mixin change, boot the dev server and check:
+
+**`MixinApplicationTest` is the check, and it runs with `./gradlew build`.** It reads the target list out
+of `arkonessentials.mixins.json`, resolves each `@Mixin(...)` annotation from the mixin's own source, and
+`Class.forName`s every target — which runs the transformer, so a failed injection throws. A new mixin is
+covered automatically; there is no second list to update.
+
+This replaced booting a server and grepping `debug.log`, which worked but had a hole big enough to hide a
+live bug: `ChunkMap$TrackedEntity` only loads once an entity **enters tracking** and `PlayerAdvancements`
+only once somebody **joins**, so on an empty server neither was ever transformed and both silently
+"passed". `PlayerAdvancementsMixin` shipped broken through exactly that gap and the new test caught it on
+its first run.
+
+It proves the injections *apply*, not that they do the right thing — behaviour still needs a server:
 
 ```bash
-grep -E "Mixing [A-Za-z]+ from ArkonEssentials" run/logs/debug.log
+grep -E "Mixing [A-Za-z]+ from arkonessentials" run/logs/debug.log
 grep -iE "InjectionError|Critical injection" run/logs/debug.log
 ```
 
-All five mixins must appear. Two gotchas:
+The server has no usable stdin here. Drive it by enabling RCON in `run/server.properties` and sending
+commands over the RCON protocol (`scratchpad/rcon.py`). Revert `enable-rcon` / `rcon.password` /
+`server-port` afterwards, and **run it on 25566 or above** — 25565 belongs to the user's hosting software.
 
-- `ChunkMap$TrackedEntity` is an inner class that only loads once an entity **enters tracking**. On an
-  empty server it never loads. To force it: set `pause-when-empty-seconds=0` in
-  `run/server.properties`, then `forceload add 0 0` followed by `summon minecraft:pig 8 100 8`.
-- The server has no usable stdin here. Drive it by enabling RCON in `run/server.properties` and
-  sending commands over the RCON protocol. Revert `enable-rcon` / `rcon.password` / `online-mode`
-  afterwards.
+**Watch for a target that is a lambda.** If vanilla wraps the call you want in `ifPresent(x -> ...)` or
+similar, it compiles into a synthetic method and a redirect aimed at the enclosing method scans zero
+targets. Get the real name from `javap -p` (`lambda$award$0`) rather than guessing, and accept that
+synthetic names are not API — tolerable only because the test now makes a rename loud.
 
 ## Architecture
 
@@ -688,7 +730,7 @@ Teleport lives alongside the states rather than inside them. Both destinations a
 - `/admin home set` pins a **home**, and `/admin home` is a plain teleport to it. Home is fixed:
   going there changes neither the player's state nor the return point.
 
-The five mixins each cover one leak:
+Each mixin covers one leak:
 
 | Mixin | Purpose |
 |---|---|
@@ -699,9 +741,11 @@ The five mixins each cover one leak:
 | `PlayerListMixin` | Suppresses the join message |
 | `ServerGamePacketListenerImplMixin` | Suppresses the leave message |
 | `ServerPlayerMixin` | Records `lastNonCreativeMode` on every `setGameMode` |
-| `PlayerMixin` | Cancels `causeFoodExhaustion` — the single source of hunger loss, so the bar freezes without per-tick writes |
+| `PlayerMixin` | Cancels `causeFoodExhaustion` (the single source of hunger loss), and redirects the `noPhysics` write in `tick` for noclip — the one mixin that must run client-side too |
 | `ItemStackMixin` | Cancels the four-arg `hurtAndBreak`, the funnel every other overload delegates into, sparing armour and tools |
 | `ServerPlayerGameModeMixin` | TAIL of `setGameModeForPlayer` — re-asserts `/fly` and books soft landings; see Flight below |
+| `PlayerAdvancementsMixin` | Suppresses the advancement broadcast for a hidden player |
+| `GiveCommandMixin` | Drops vanilla's `/give` registration so the shorthand can own the name |
 
 Tab list and locator bar are handled without mixins — by pushing packets from `refreshVisibility` and
 calling `ServerWaypointManager.track/untrackWaypoint`.
@@ -739,6 +783,21 @@ startup, both mixins applied, no injection errors, squaremap's `/tiles/players.j
 ping still answers (`scratchpad/ping.py` is a minimal status-ping client — status only, so it needs no
 login). **The filtering itself is unproven**: with nobody online there is no vanished player to omit, so
 that last step needs a real client.
+
+**Vanish suppresses every announcement about the vanished player**, not merely join and leave. Each one
+needed its own chokepoint, and all four are gated on `hiddenFromPlayers()` rather than on VANISH
+specifically, so Admin and Ghost get the same treatment:
+
+| Leak | Where |
+|---|---|
+| Join | `PlayerListMixin` |
+| Leave | `ServerGamePacketListenerImplMixin` |
+| Death | `ServerPlayerMixin#die`, `@Redirect` on the broadcast |
+| Advancements | `PlayerAdvancementsMixin#award`, `@Redirect` on `broadcastSystemMessage` |
+| AFK | `AfkManager` — `tick` skips hidden players entirely, `announce` tells them privately |
+
+Auto-AFK is **skipped**, not merely announced privately: marking a vanished player AFK would put an AFK
+label on a name nobody is supposed to know is online, and there is nobody to inform anyway.
 
 **`/afk` is refused while appearing offline**, and `/fakeleave` silently clears an existing AFK via
 `AfkManager.clear` (no announcement). `AfkManager.announce` additionally suppresses for
@@ -818,18 +877,50 @@ is not.
 `DATA_VERSION` is **3**, and this one earns it — an older build would collapse a mode's two loadout slots
 into one and drop every per-mode stash. Both are inventories, which is the line.
 
-### Noclip is spectator, and that is not negotiable
+### Noclip has two shapes, and which one you get is not a preference
 
-`Player` does `noPhysics = isSpectator()` **every tick, in code shared with the client** — so
-`LocalPlayer` decides collision for the player being controlled, locally, from game mode. A server cannot
-grant noclip: setting the flag server-side is overwritten next tick and the client never read it. Creative
-flight collides like anything else. Do not try to "fix" this server-side; the only alternative is a client
-mixin, which only helps players running our optional jar and is functionally a fly-through-walls hack.
+`Player.tick` does `noPhysics = isSpectator()` **every tick, in code shared with the client** — so
+`LocalPlayer` decides collision for the player being controlled, locally, from game mode. A server on its
+own cannot grant noclip: setting the flag server-side is overwritten next tick and the client never read
+it. Creative flight collides like anything else. That is why noclip was spectator-only through 0.34.
 
-`NoclipManager` therefore swaps game mode and swaps back, holding the return mode in memory (restored on
-toggle and on disconnect; a crash mid-noclip leaves someone in spectator, recoverable with `/gamemode`).
-It sets `suppressModeTracking` around the change so `ServerPlayerMixin` does not record spectator as the
-player's `lastNonCreativeMode` and send `/admin off` there later.
+Spectator cannot build, which made it useless to the person actually asking for noclip. So 0.35 added a
+second shape, chosen per player from `ServerPlayNetworking.canSend(player, NoclipPayload.TYPE)`:
+
+- **Phase** — the client has our jar. `NoclipPayload` tells it to hold `noPhysics` open; game mode is
+  untouched, so Build Mode keeps creative, its loadout and its reach, and blocks can be placed from
+  inside a wall.
+- **Spectator** — a vanilla client, unchanged from before, and the command says so and names the jar.
+
+**The capability test is the payload channel itself**, which is why it is a separate channel rather than
+another field on `AdminStatePayload` — folding it in would have tied "can phase" to "has the HUD".
+
+`NoclipManager` is loaded on **both sides** and keys `PHASING` by bare UUID, so one redirect in the shared
+source set serves both: the client's copy of `Player.tick` is the one that decides collision, and the
+server's copy matters too because `ServerGamePacketListenerImpl` waves through *any* position when
+`noPhysics` is set (verified in the 26.2 sources — it is the first clause of the accept condition).
+
+Three traps in that mixin, each of which cost a failed run:
+
+1. **It must be a `@Redirect` of the field write, not an `@Inject` at TAIL.** The assignment is the first
+   statement of `tick()` and the movement for that tick happens later *inside* the same call, so a TAIL
+   write is overwritten at the head of the next tick before anything reads it — the flag would never once
+   be true during a move.
+2. **The target owner is `Player`, not `Entity`.** The field is declared on `Entity`, but javac emits the
+   reference against the static type of the expression. Confirmed from the constant pool
+   (`#410 = Fieldref // net/minecraft/world/entity/player/Player.noPhysics:Z`); naming `Entity` scans zero
+   targets and throws `InjectionError` at class load.
+3. **`EssentialsDataTest` catches this.** Its `Bootstrap.bootStrap()` loads `Player`, so a bad target
+   fails `./gradlew build` rather than waiting for a dev server — much the faster loop.
+
+Phasing players are **held in flight** by `NoclipManager.tick`, because with no collision there is no
+floor and they sink out of the world. Flight is client-authoritative, so it re-asserts only when it has
+drifted off rather than sending a packet every tick. Getting *out* of a wall on exit needs no code:
+`LocalPlayer.aiStep` runs `moveTowardsClosestSpace` whenever `noPhysics` is false, which is vanilla's own
+escape hatch.
+
+The spectator fallback is unchanged, including `suppressModeTracking` around the change so
+`ServerPlayerMixin` does not record spectator as the player's `lastNonCreativeMode`.
 
 ### `/vanish` and the loadout/creative split
 

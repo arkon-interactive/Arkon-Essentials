@@ -52,6 +52,7 @@ public class ArkonEssentials implements ModInitializer {
 		InteractionGuard.register();
 
 		PayloadTypeRegistry.clientboundPlay().register(AdminStatePayload.TYPE, AdminStatePayload.STREAM_CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(NoclipPayload.TYPE, NoclipPayload.STREAM_CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(HandshakePayload.TYPE, HandshakePayload.STREAM_CODEC);
 
 		// Turns a blank indicator into an explanation. The versioned state channel already makes a
@@ -85,6 +86,7 @@ public class ArkonEssentials implements ModInitializer {
 			PresenceCommand.register(dispatcher);
 			ModeCommand.register(dispatcher);
 			VanishCommand.register(dispatcher);
+			GiveCommand.register(dispatcher);
 			ArkonCommand.register(dispatcher);
 		});
 
@@ -117,6 +119,9 @@ public class ArkonEssentials implements ModInitializer {
 
 		// Keeps each Demigod's shield ceiling in step with their level, and refills it.
 		ServerTickEvents.END_SERVER_TICK.register(DemigodShield::tick);
+
+		// Keeps phasing players airborne. Without collision there is no floor to stand on.
+		ServerTickEvents.END_SERVER_TICK.register(NoclipManager::tick);
 
 		// Re-sends the spoofed glow, which any genuine entity-data change would otherwise overwrite.
 		ServerTickEvents.END_SERVER_TICK.register(XrayManager::tick);

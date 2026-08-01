@@ -95,6 +95,12 @@ public final class AdminPermissions {
 	 */
 	public static final Identifier VANISH_NOCLIP = node("vanish.noclip");
 
+	/** {@code /give} for yourself. Vanilla's own /give is replaced; see GiveCommand. */
+	public static final Identifier GIVE = node("give");
+
+	public static final Identifier GIVE_OTHERS = node("give.others");
+	public static final Identifier GIVE_ALL = node("give.all");
+
 	public static final Identifier GOD = node("god");
 	public static final Identifier DEMIGOD = node("demigod");
 	public static final Identifier FLY = node("fly");
@@ -242,6 +248,9 @@ public final class AdminPermissions {
 		staff(FAKE_JOIN),
 		staff(VANISH),
 		staff(VANISH_NOCLIP),
+		staff(GIVE),
+		staff(GIVE_OTHERS),
+		staff(GIVE_ALL),
 		staff(GOD),
 		staff(DEMIGOD),
 		staff(FLY),

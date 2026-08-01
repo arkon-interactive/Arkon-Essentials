@@ -5,11 +5,13 @@
 	"mixins": [
 		"EntityAccessor",
 		"EntityMixin",
+		"GiveCommandMixin",
 		"ItemEntityMixin",
 		"ItemStackMixin",
 		"ListPlayersCommandMixin",
 		"LivingEntityMixin",
 		"MinecraftServerMixin",
+		"PlayerAdvancementsMixin",
 		"PlayerListMixin",
 		"PlayerMixin",
 		"ServerGamePacketListenerImplMixin",

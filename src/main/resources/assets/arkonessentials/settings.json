@@ -192,6 +192,17 @@
       "command": "/arkon config demigodShieldRegenDelaySeconds <value>",
       "min": 0,
       "max": 300
+    },
+    {
+      "key": "giveDefaultCount",
+      "label": "Default Give Count",
+      "category": "Items",
+      "description": "How many of an item /give hands over when no count is named.",
+      "type": "integer",
+      "default": 64,
+      "command": "/arkon config giveDefaultCount <value>",
+      "min": 1,
+      "max": 6400
     }
   ]
 }

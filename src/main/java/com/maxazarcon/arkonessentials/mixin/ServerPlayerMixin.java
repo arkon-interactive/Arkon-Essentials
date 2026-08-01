@@ -1,13 +1,17 @@
 package com.maxazarcon.arkonessentials.mixin;
 
+import com.maxazarcon.arkonessentials.AdminManager;
 import com.maxazarcon.arkonessentials.EssentialsData;
 import com.maxazarcon.arkonessentials.NoclipManager;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.level.GameType;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
@@ -24,6 +28,30 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  */
 @Mixin(ServerPlayer.class)
 public abstract class ServerPlayerMixin {
+	/**
+	 * Keeps a vanished player's death out of chat.
+	 *
+	 * <p>The protected hidden states cannot normally die, so this rarely fires — but "rarely" is not
+	 * "never": Admin Mode is creative rather than protected, and the void does not care. One death
+	 * message would undo an entire session of hiding.
+	 */
+	@Redirect(
+		method = "die",
+		at = @At(
+			value = "INVOKE",
+			target = "Lnet/minecraft/server/players/PlayerList;broadcastSystemMessage(Lnet/minecraft/network/chat/Component;Z)V"
+		)
+	)
+	private void arkonessentials$suppressDeathMessage(
+		final PlayerList list,
+		final Component message,
+		final boolean overlay
+	) {
+		if (!AdminManager.getState((ServerPlayer) (Object) this).hiddenFromPlayers()) {
+			list.broadcastSystemMessage(message, overlay);
+		}
+	}
+
 	/**
 	 * At HEAD, so {@code mode} is the mode being moved <em>to</em> and the field still holds the old one.
 	 *
