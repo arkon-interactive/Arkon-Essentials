@@ -593,6 +593,43 @@
       "default": "operator",
       "inheritsFrom": "arkonessentials.admin",
       "command": "/xray"
+    },
+    {
+      "node": "arkonessentials.give",
+      "id": "arkonessentials:give",
+      "label": "Give Items",
+      "description": "Give yourself items, matching loose names like 'cobble'.",
+      "category": "Items",
+      "kind": "ability",
+      "type": "boolean",
+      "default": "operator",
+      "command": "/give <item> [count]"
+    },
+    {
+      "node": "arkonessentials.give.others",
+      "id": "arkonessentials:give.others",
+      "label": "Give To Others",
+      "description": "Give items to another player.",
+      "category": "Items",
+      "kind": "ability",
+      "type": "boolean",
+      "default": "operator",
+      "parent": "arkonessentials.give",
+      "inheritsFrom": "arkonessentials.give",
+      "command": "/give <player> <item> [count]"
+    },
+    {
+      "node": "arkonessentials.give.all",
+      "id": "arkonessentials:give.all",
+      "label": "Give To Everyone",
+      "description": "Give items to everyone online.",
+      "category": "Items",
+      "kind": "ability",
+      "type": "boolean",
+      "default": "operator",
+      "parent": "arkonessentials.give",
+      "inheritsFrom": "arkonessentials.give",
+      "command": "/giveall <item> [count]"
     }
   ]
 }

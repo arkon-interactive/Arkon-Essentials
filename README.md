@@ -75,16 +75,29 @@ lit screen while you sit still.
 | `/vanish` | Toggle |
 | `/vanish pickups` or `/vanish p` | Allow or refuse picking items up |
 | `/vanish interact` or `/vanish i` | Allow or refuse world interaction |
-| `/noclip` | Fly through blocks — see the caveat below |
+| `/noclip` | Fly through blocks — two shapes, see below |
 
 `pickups` and `interact` are both off by default and persist per player, so you can flip them
 mid-session without leaving the mode.
 
-**`/noclip` uses spectator mode**, because that is the only thing in Minecraft that actually passes
-through blocks: the client decides collision for the player you are controlling, from your game mode,
-every tick. A server cannot grant noclip any other way, and creative flight collides like everything
-else. So while noclipping you get spectator's rules — **no hotbar and no interaction at all** — and the
-toggle puts you back where you were. Node: `arkonessentials:vanish.noclip`.
+**`/noclip` behaves differently depending on whether you have the client jar**, and the command tells
+you which one you got:
+
+- **With the Arkon Essentials client jar** you phase through blocks with your game mode untouched. You
+  keep your hotbar, your inventory and your reach, so **you can noclip and build at the same time** —
+  fly out to check a silhouette from inside the hill, place a block, fly back.
+- **Without it** you get spectator mode instead, with spectator's rules: no hotbar and no interaction
+  until you toggle back off.
+
+The split is not a preference, it is where the code runs. Collision for the player *you* are
+controlling is simulated on your own machine — `noPhysics` is recomputed from your game mode every
+tick, client-side — so a server on its own can only reach it by changing your game mode, and spectator
+is the only mode that passes through blocks. The client jar is what lets the server say "stop
+colliding" without touching anything else. Node: `arkonessentials:vanish.noclip`.
+
+While phasing you are held in flight, because with no collision there is no floor to stand on.
+Toggling off lands you; if you are inside a wall the game walks you out to the nearest open space, the
+same way it does when leaving spectator.
 
 > **Doors, trapdoors and fence gates always work**, even with interaction refused — a mode for moving
 > quietly through a building that cannot open a door is not much use. Note the door still swings and
@@ -315,6 +328,30 @@ roughly every 15 seconds, so treat it as a recent average rather than a live pro
 row will usually give the same answer. Asking about a player you cannot see is refused as though they
 were not online, so it cannot be used to detect vanished staff.
 
+### Items
+
+| Command | What it does |
+|---|---|
+| `/give <item> [count]` | Give yourself items |
+| `/give <player> <item> [count]` | Give someone else items |
+| `/giveall <item> [count]` | Give everyone online items |
+
+**The item name is matched loosely**, so `/give cobble` gives you cobblestone and `/give diamond_pick`
+gives a diamond pickaxe. An exact id wins first, then a name the item starts with, then one it merely
+contains; within a tier the shortest name wins, which is why `cobble` lands on `cobblestone` rather
+than `cobblestone_stairs`. Namespaced ids work too, so `create:cogwheel` is typed in full.
+
+It is substring matching, **not** typo correction: `diamnd` finds nothing and says so. Guessing at a
+misspelling is how a command quietly hands you the wrong item.
+
+Leaving off the count gives `giveDefaultCount` — a full stack out of the box, settable with
+`/arkon config giveDefaultCount <n>`. Counts above a stack are split into stacks, and anything that
+does not fit drops at your feet reserved for you.
+
+This replaces vanilla's `/give` entirely, because vanilla's takes a player first and a player argument
+swallows any bare word — `/give cobble` would look for a player called "cobble". Every vanilla form is
+still here. Nodes: `arkonessentials:give`, `give.others`, `give.all`.
+
 ### Administration
 
 | Command | What it does |
@@ -373,6 +410,9 @@ Nodes are `arkonessentials:<node>`, which permission mods usually write dotted:
 | `demigod` | Demigod |
 | `vanish` | Vanish, and its two modifiers |
 | `vanish.noclip` | `/noclip` |
+| `give` | `/give <item>` |
+| `give.others` | `/give <player> <item>` |
+| `give.all` | `/giveall` |
 | `fly` | `/fly` |
 | `fly.speed` | `/fly speed` |
 | `tp` | `/tp <player>` |

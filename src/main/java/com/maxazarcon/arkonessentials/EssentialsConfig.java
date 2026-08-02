@@ -121,6 +121,14 @@ public final class EssentialsConfig {
 	public boolean hideFromWebMaps = true;
 
 	/**
+	 * How many of an item {@code /give} hands over when no count is named.
+	 *
+	 * <p>Vanilla gives 1, which is almost never what anyone wanted to type. A stack is the usual
+	 * expectation on a server with a shorthand give.
+	 */
+	public int giveDefaultCount = 64;
+
+	/**
 	 * Largest Demigod shield, in absorption points — two per gold heart. 10 is five hearts.
 	 *
 	 * <p>Sits on top of health rather than replacing armour, so it stacks with whatever the player is
@@ -191,6 +199,8 @@ public final class EssentialsConfig {
 			"Whether vanished players are left out of the server-list ping count and sample."),
 		Option.ofBool("hideFromWebMaps", c -> c.hideFromWebMaps, (c, v) -> c.hideFromWebMaps = v,
 			"Whether vanished players are hidden on BlueMap and squaremap, when installed."),
+		Option.ofInt("giveDefaultCount", 1, 6400, c -> c.giveDefaultCount, (c, v) -> c.giveDefaultCount = v,
+			"How many of an item /give hands over when no count is named."),
 		Option.ofDouble("demigodShieldCap", 0.0, 40.0, c -> c.demigodShieldCap, (c, v) -> c.demigodShieldCap = v,
 			"Largest Demigod shield, in absorption points. Two per gold heart."),
 		Option.ofInt("demigodShieldLevels", 1, 100, c -> c.demigodShieldLevels, (c, v) -> c.demigodShieldLevels = v,

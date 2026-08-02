@@ -195,9 +195,10 @@ public final class AfkManager {
 				continue;
 			}
 
-			// Someone who has announced a fake departure is being deliberately quiet; marking them AFK
-			// would broadcast their name and undo the point of it. Their own /afk still works.
-			if (PresenceManager.isAppearingOffline(player)) {
+			// Anyone deliberately unseen is left alone. A fake departure would be undone by broadcasting
+			// their name, and a vanished player already has what AFK grants — frozen hunger and mobs
+			// ignoring them — so the timer would be pure noise. Their own /afk still works.
+			if (PresenceManager.isAppearingOffline(player) || AdminManager.getState(player).hiddenFromPlayers()) {
 				continue;
 			}
 

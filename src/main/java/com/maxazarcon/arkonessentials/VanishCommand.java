@@ -62,14 +62,20 @@ public final class VanishCommand {
 
 	private static int toggleNoclip(final CommandSourceStack source) throws CommandSyntaxException {
 		ServerPlayer player = source.getPlayerOrException();
-		boolean on = NoclipManager.toggle(player);
+		NoclipManager.Result result = NoclipManager.toggle(player);
+
+		// The two "on" wordings are not decoration: which one a player gets tells them whether they can
+		// still build, and that difference is decided entirely by whether their client has the mod.
+		String message = switch (result) {
+			case PHASE -> "Noclip on — you can still build. Toggle it off to land.";
+			case SPECTATOR -> "Noclip on — spectator, so no hotbar and no interaction until you toggle it "
+				+ "off. Install the Arkon Essentials client jar to noclip and build at the same time.";
+			case OFF -> "Noclip off.";
+		};
 
 		source.sendSuccess(
-			() -> Component.literal(
-				on
-					? "Noclip on — spectator, so no hotbar and no interaction until you toggle it off."
-					: "Noclip off."
-			).withStyle(on ? ChatFormatting.AQUA : ChatFormatting.GRAY),
+			() -> Component.literal(message)
+				.withStyle(result == NoclipManager.Result.OFF ? ChatFormatting.GRAY : ChatFormatting.AQUA),
 			false
 		);
 		return 1;

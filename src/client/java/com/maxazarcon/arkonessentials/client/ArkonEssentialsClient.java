@@ -4,6 +4,8 @@ import com.maxazarcon.arkonessentials.AdminState;
 import com.maxazarcon.arkonessentials.AdminStatePayload;
 import com.maxazarcon.arkonessentials.ArkonEssentials;
 import com.maxazarcon.arkonessentials.HandshakePayload;
+import com.maxazarcon.arkonessentials.NoclipManager;
+import com.maxazarcon.arkonessentials.NoclipPayload;
 import java.util.ArrayList;
 import java.util.List;
 import net.fabricmc.api.ClientModInitializer;
@@ -67,6 +69,18 @@ public class ArkonEssentialsClient implements ClientModInitializer {
 			})
 		);
 
+		// Registering this receiver is also the capability signal: the server's canSend check is how it
+		// decides whether this player gets true phasing or the spectator fallback. The flag itself goes
+		// into NoclipManager, which the shared PlayerMixin then reads on this side too.
+		ClientPlayNetworking.registerGlobalReceiver(
+			NoclipPayload.TYPE,
+			(payload, context) -> context.client().execute(() -> {
+				if (context.player() != null) {
+					NoclipManager.setPhasing(context.player().getUUID(), payload.active());
+				}
+			})
+		);
+
 		// Announce ourselves so a version-mismatched server can say so in chat. Gated on canSend: a server
 		// without the mod, or one too old to know this channel, has no receiver and sending would be
 		// throwing packets into the dark.
@@ -78,6 +92,12 @@ public class ArkonEssentialsClient implements ClientModInitializer {
 
 		// Without this the indicator would linger after leaving a server.
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+			// A phase flag left behind would follow the player onto the next server, where nobody granted
+			// it — and there would be no packet coming to clear it.
+			if (client.player != null) {
+				NoclipManager.setPhasing(client.player.getUUID(), false);
+			}
+
 			state = AdminState.NONE;
 			flightActive = false;
 			afk = false;
