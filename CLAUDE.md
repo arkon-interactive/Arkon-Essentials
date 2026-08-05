@@ -522,7 +522,9 @@ installed boots clean (`Done (0.541s)`, no entrypoint complaint).
 
 `https://github.com/arkon-interactive/Arkon-Essentials`, branch `main`. Git identity and credentials are
 already configured locally (Git Credential Manager), so `git push` works without anyone handling a token.
-**The `gh` CLI is not installed**, which is why nothing here depends on it.
+The **`gh` CLI is installed** (2.96.0, authenticated as the repo owner). It arrived after this
+file first said it was absent — nothing in the build or release path depends on it, and that stays
+true deliberately: see the warning below about releasing by hand.
 
 Two workflows in `.github/workflows/`:
 
@@ -540,6 +542,27 @@ git tag v0.26.0 && git push origin v0.26.0
 The release job **refuses to publish if the tag disagrees with `mod_version`**. Without that check a
 mismatched tag would ship a jar whose own version string is wrong — invisible until someone reports a bug
 against a version that was never built.
+
+**Never release with `gh release create`, and understand why the guard cannot save you if you do.** The
+guard runs inside the workflow, and the workflow is triggered *by the tag*. `gh release create v0.2.1`
+creates the tag as a side effect, so the release is already public before the job that would have refused
+it has even started. This is not hypothetical — it happened on 2026-08-02 and produced two bad artifacts:
+
+- a **`v0.2.1` release carrying `arkonessentials-0.35.0.jar`**, the exact "jar whose own version string is
+  wrong" the guard exists to prevent. The run did fail, correctly, two seconds too late.
+- a **`v0.35.0` release missing its sources jar**, because the workflow then died with *"a release with
+  the same tag name already exists"* and never reached its own publish step. The jar attached was whichever
+  one the local `build/libs` happened to hold, not one CI produced from a clean checkout — which is most of
+  the point of releasing through CI at all.
+
+There is a second trap in releasing locally: **`build/libs` is not cleaned between version bumps**, so it
+accumulates jars from previous versions. The workflow's `arkonessentials-*.jar` glob is safe on a fresh
+runner checkout and actively dangerous locally, where it would sweep up stale jars from older versions
+into the new release.
+
+If a release does need repairing, `gh release upload <tag> <file>` adds a missing asset without deleting
+anything. Deleting a published release is a last resort and is worth confirming with the owner first —
+it breaks any link already handed out.
 
 Two things that would break CI and are easy to reintroduce:
 
