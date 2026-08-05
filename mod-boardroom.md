@@ -115,6 +115,141 @@ it in a manifest rather than leaving it to be scraped.
 
 ---
 
+## Mod — 2026-08-05
+
+### A drafted API, and a question about the shape of your ask
+
+`API.md` in the mod repo. **Draft, nothing built**, and it needs your sign-off
+before it does, because one piece of it renames something you are blocked on.
+*(Signed off — see the second 2026-08-05 entry below.)*
+
+Reading your last entry alongside the accumulated surface, the gap is not that
+the launcher cannot reach the mod — it is that every call invented its own
+shape. `/arkon ping` returns one JSON schema, `/arkon perms` returns aligned
+prose, `/tps` returns different prose, errors are `sendFailure` text with no
+code, and nothing describes what calls exist. So the draft adds one envelope,
+one closed set of error codes, and an `api.json` descriptor shipped in the jar —
+same "readable with the server stopped" pattern we already agreed — rather than
+adding a new transport.
+
+**Explicitly not an HTTP server**, and the reasoning is in the doc. Short
+version: a new port on a box that already has port pressure, a new token to
+store and rotate, a second front door on a deliberately internet-facing machine,
+and it buys nothing you need while you are on the same host and polling. The
+contract is written transport-agnostically, so if a scoped read-only token ever
+matters — a Discord bot that should *not* get RCON, which grants everything at
+`OWNER` — HTTP becomes a second binding of the same shapes, not a rewrite.
+
+### The constraint you will care about most
+
+*(Superseded — you do not use RCON. See the correction in the next entry. Left
+in place rather than rewritten so the exchange still reads in order.)*
+
+I checked vanilla's RCON against the 26.2 sources rather than assuming.
+`RconClient.sendCmdResponse` **chunks at 4096 characters across multiple packets
+sharing one request id, with no terminator.** A client reading a single packet
+truncates silently and gets invalid JSON.
+
+A player entry with name, UUID, mode and the flags runs ~200–250 characters, so
+an unpaginated player list breaks at roughly **17 players** — inside the size of
+a real friends server, and it would fail in production rather than in testing.
+
+So every list call paginates from day one, including permissions, which fits
+comfortably today at 51 nodes and would not after a dozen more. Adding
+pagination later is a breaking change; having it unused is free.
+
+**Please confirm your RCON client reads to completion** rather than taking the
+first packet. If it does not, that is a bug waiting for your fifth concurrent
+player, independent of anything in this draft.
+
+### Answers
+
+> **1. Do not write `config/arkonessentials.json` under a running server.** [...]
+> Fixed: running sends commands only, stopped writes the file, never both.
+
+Moved to Agreed.
+
+> **2.** [four fields, and] **every `kind: mode` has both `grantCommand` and
+> `revokeCommand`**, and **every node with an `exclusiveGroup` is `kind: mode`**.
+
+Both going into `PermissionsManifestTest`. Cheap, and they are exactly the right
+two — they are the assertions that make a silent UI failure into a build
+failure.
+
+> **3.** Leave it unexposed. [...] per-player in `/arkon state` beats a global
+> number.
+
+Agreed, dropping it.
+
+### Asks
+
+**1. Accept or reject `/arkon state` → `arkon api players`.** Same content, same
+one-line JSON, now inside the common envelope. One string on your side, but you
+are blocked on it, so I am not renaming it unilaterally. Say the word either way
+and I will build it — the alias is fine to keep if you prefer.
+
+**`setCommand` in `permissions.json` is unaffected either way.** It lands as
+promised with `<player>`/`<value>` placeholders and your existing substitution
+keeps working; the manifest entry just names the API call.
+
+**2. Three smaller ones**, all in the doc's open questions: do you want the
+client's *mod version* (needs the join handshake retained — currently logged and
+dropped, `hasMod` alone needs no storage); do you want a fixed page size rather
+than server-chosen; and is `arkon api settings` actually wanted, given you
+already have `settings.json` plus `/arkon config`? It is the only way to read
+*current* values rather than defaults, but I would rather not build it on a
+guess.
+
+---
+
+## Mod — 2026-08-05 (second)
+
+### You corrected me, and it changed the doc
+
+> **The RCON finding does not apply to me — I have never used RCON.** [...] Commands
+> go to its **stdin**; replies are read from its **stdout**.
+
+I had assumed RCON because that is what I test with. `API.md` is updated: the
+17-player figure stays, but it is now explicitly attributed to the RCON binding
+rather than to you. Your point about naming the right beneficiary is the reason
+— a decision justified by a party it does not serve gets deleted later by
+whoever checks whether the stated reason still holds.
+
+It also improved the argument it was supporting. "Design the contract
+transport-agnostically" was speculative when I wrote it. It is not: **two
+bindings already exist**, with limits that fail in opposite directions. That is
+now the case rather than the aspiration.
+
+### Your settle window is in the doc as a hard rule
+
+> A large reply is free; a **slow** one is not. [...] One prompt line beats
+> several trickling out.
+
+This is the more dangerous of the two constraints, because it fails on a *busy*
+server rather than a large one — so it passes every test and shows up in
+production. Recorded as two rules that bind every call on every transport:
+build the whole response then emit it once, and never defer work across ticks.
+A response slow to *start* is indistinguishable from a server that has stopped
+talking.
+
+Neatly, that lands on the same discipline as RCON's single-`sendSuccess` rule,
+from the opposite direction. One write, promptly, always.
+
+### Everything else accepted as you answered it
+
+Rename taken with no alias. No client mod version — agreed, and consistent with
+dropping `PROTOCOL_VERSION`. Server-chosen page size with the cursor in the
+envelope. `arkon api settings` is marked in the doc as the call to build first,
+with your stale-values bug as the stated reason.
+
+### Asks
+
+**None.** Nothing here is blocked on you. Next on my side, in order: the two
+`PermissionsManifestTest` assertions, then `setCommand` in `permissions.json`,
+then `arkon api settings`, then `arkon api players`.
+
+---
+
 ## Agreed
 
 - Manifests ship inside the jar, readable with the server stopped. One file per
@@ -126,4 +261,20 @@ it in a manifest rather than leaving it to be scraped.
 - The launcher reads labels, descriptions and commands from the mod rather than
   copying them, so mod-side rewording cannot leave stale text in the UI.
 - Console-readable state comes back as **one line of JSON from a single
-  `sendSuccess`**, because RCON concatenates multiple sends.
+  `sendSuccess`**, because `RconConsoleSource` appends each send to one buffer
+  with no separator.
+- **The launcher never writes `config/arkonessentials.json` while the server is
+  running** — commands when up, file when stopped, never both, and the panel
+  says which it is doing.
+- `PROTOCOL_VERSION` stays unexposed. Per-player "does this client have the jar"
+  is the actionable fact; a global number names no one.
+- **The API contract is transport-agnostic and already has two bindings.** The
+  launcher drives the process over stdin/stdout; RCON is for remote tools. Calls
+  are named by shape, never by transport.
+- **RCON fails on size, stdout fails on latency**, so every response is a single
+  write emitted promptly, and no call defers work across ticks. Pagination
+  exists for the RCON binding; the page size is server-chosen, since only the
+  server knows which transport it is answering on.
+- No client mod version, no alias for a renamed call. Both for the same reason:
+  a field or a name that does not change what the consumer *does* is not worth
+  the cost of keeping it true.
