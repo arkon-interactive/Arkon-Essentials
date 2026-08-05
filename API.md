@@ -1,8 +1,8 @@
-# Arkon Essentials API — draft
+# Arkon Essentials API
 
-**Status: proposed, not built.** This is a design for review. Nothing here exists yet; the shapes are
-open to change until the launcher agrees to them. Where it supersedes something already promised in
-`mod-boardroom.md`, that is called out explicitly.
+**Status: agreed, not built.** The shapes below are signed off by the launcher (`mod-boardroom.md`,
+2026-08-05) and nothing here exists yet. Where this supersedes something promised earlier, that is called
+out explicitly.
 
 ---
 
@@ -10,9 +10,9 @@ open to change until the launcher agrees to them. Where it supersedes something 
 
 It is worth being precise, because the obvious answer is the wrong one.
 
-Today a tool can reach the mod three ways: two manifests inside the jar (`permissions.json`,
-`settings.json`), a handful of RCON commands, and nothing else. That works, and the launcher is built on
-it. What it lacks is not *reach* — it is **consistency and self-description**:
+Today a tool can reach the mod two ways: manifests inside the jar (`permissions.json`, `settings.json`),
+and a handful of commands sent over whatever console the caller has — RCON for a remote tool, the process
+stdin for one that owns the server. That works, and the launcher is built on it. What it lacks is not *reach* — it is **consistency and self-description**:
 
 | | Today | Consequence |
 |---|---|---|
@@ -36,13 +36,15 @@ If "API" brought a REST endpoint to mind, here is the case against, and the case
 1. **A new port.** Port pressure is already real on this box — 25565 belongs to the hosting software, and
    the dev server has to live at 25566+. An API port is one more thing to allocate, document, and
    collide with.
-2. **New authentication.** A token to generate, store on both sides, rotate, and leak. RCON already has
-   an authenticated channel that the launcher already speaks and the operator already configures.
+2. **New authentication, where there is currently none to manage.** A token to generate, store on both
+   sides, rotate, and leak. The launcher owns the server process and writes to its stdin, so today it
+   needs no credential at all; a remote tool uses RCON, which the operator already configures. HTTP would
+   introduce a secret where the shipping integration has none.
 3. **New attack surface on a deliberately exposed machine.** The whole point of the launcher is hosting
    for other people, so the server *is* internet-facing. An HTTP listener is a second front door. RCON's
    is at least a door operators already know to think about.
-4. **It buys nothing the launcher needs.** The launcher runs on the same machine as the server and polls.
-   Polling three calls at 1 Hz over RCON is unremarkable.
+4. **It buys nothing the launcher needs.** It already has a private, zero-setup channel to a process it
+   owns. A loopback socket would be strictly more machinery for strictly less directness.
 
 **For, later — these are the triggers that would make HTTP correct:**
 
@@ -53,17 +55,25 @@ If "API" brought a REST endpoint to mind, here is the case against, and the case
 - **Push instead of poll.** SSE or a websocket for live state. RCON cannot push, ever.
 - **A browser-reachable dashboard**, where `curl`-ability and status codes genuinely matter.
 
-**So: design the contract transport-agnostically, bind it to RCON now.** Every call below is a name, an
-argument list and a JSON response — none of which mention RCON. If HTTP is added later it becomes a
-second binding of the same contract (`GET /v1/players` → the `players` call), and the launcher's parsing
-does not change. That is the part worth getting right today, and it costs nothing to do so.
+**So: design the contract transport-agnostically.** Every call below is a name, an argument list and a
+JSON response — none of which mention a transport.
+
+This is not speculative tidiness. **Two bindings already exist**, which was itself a discovery: the
+launcher does not use RCON at all. It owns the server process and drives it over **stdin/stdout**, with a
+reader thread collecting replies. So the contract is already serving two transports with materially
+different limits before any of it is built, and a third (HTTP) would change no payload.
 
 ---
 
-## The transport constraint that shapes everything
+## Transport constraints
 
-Two facts about vanilla RCON, both verified against the 26.2 sources rather than assumed. They are not
-incidental — they dictate the response format.
+There are two consumers, and they fail in opposite directions. **RCON cannot take a large reply; stdout
+cannot take a slow one.** A response that satisfies both is a single write, emitted promptly, chunked by
+count rather than by size.
+
+### RCON — size
+
+Two facts about vanilla RCON, both verified against the 26.2 sources rather than assumed.
 
 **1. Multiple `sendSuccess` calls are concatenated with no separator.**
 
@@ -93,13 +103,34 @@ Every chunk carries the same request id and nothing marks the last one. A client
 packet — which most simple RCON clients do — **silently truncates at 4096 characters and gets invalid
 JSON.**
 
-This is the single most important consequence in this document: **pagination is mandatory, not a
-nicety.** A player entry with name, UUID, mode and the eight flags runs roughly 200–250 characters, so an
-unpaginated player list breaks somewhere around **17 players** — well inside the size of a friends
-server, and it would fail in production rather than in testing.
+So **pagination is mandatory for this binding, not a nicety.** A player entry with name, UUID, mode and
+the eight flags runs roughly 200–250 characters, so an unpaginated player list breaks somewhere around
+**17 players** — inside the size of a friends server, and it would fail in production rather than in
+testing.
 
-Every list-returning call therefore takes a page argument and reports whether more remains. The page size
-is chosen by the server so the client never has to reason about byte budgets.
+**This is not the launcher's constraint, and it should not be justified by the launcher's needs.** They
+read stdout, where there is no framing and no 4096 limit; a 51-node reply arrives as 51 lines and parses
+fine today. Pagination exists here for the RCON binding, where the failure is silent and a remote console
+or a Discord bot will hit it. Naming the wrong beneficiary for a design decision is how it gets removed
+later by someone who checks whether the stated reason still holds.
+
+Every list-returning call takes a page argument and reports whether more remains. The page size is
+**chosen by the server**, because only the server knows which transport it is answering on — a number the
+client picks would be wrong for RCON and meaningless for stdout.
+
+### stdout — latency
+
+The launcher's reader collects output until the stream goes quiet for a settle window. A large reply
+costs nothing; a **slow** one is cut off. Commands run on the server thread, so one issued during an
+autosave can outlast the window — this has already happened twice in practice, on `/arkon ping` and
+`/tps`, and the launcher now retries once.
+
+Two rules follow, and they apply to every call regardless of binding:
+
+- **One write, not a trickle.** Build the whole response, then emit it. This is the same discipline the
+  single-`sendSuccess` rule already imposes for RCON, arriving from the opposite direction.
+- **Never compute across ticks.** Nothing here may defer work to a later tick and emit when ready. A
+  response that is slow to *start* is indistinguishable from a server that has stopped talking.
 
 ---
 
@@ -230,6 +261,12 @@ setting appears here the moment it is declared — no second list.
 Reads return current values with their bounds and descriptions. Writes apply live via
 `applyToOnlinePlayers`, which is what makes an edit take effect without a relog.
 
+**Build this one first.** It is the only way to read what a setting *currently is* on a running server —
+`settings.json` gives defaults and bounds, `/arkon config` sets. That gap already caused a bug on the
+launcher side: its settings tab read the config file while the server was up, which is exactly the copy
+that a running server overwrites, so the values displayed could be stale even after it stopped writing
+to that file.
+
 ### `arkon api set <player> <key> <value>` — live player state
 
 The launcher's blocking ask. Keys mirror the `players` response: `mode`, `flight`, `flight.speed`,
@@ -266,10 +303,16 @@ following the config. Without that, every touch of a slider pins someone off the
 
 ---
 
-## Open questions for the launcher
+## Settled
 
-1. **`/arkon state` → `arkon api players`.** Accept the rename, or should the alias stay?
-2. **Client mod version** — worth retaining the handshake to report it, or is `hasMod` enough?
-3. **Page size** — server-chosen is simplest, but say so if a fixed size makes the panel's paging easier.
-4. **Is `arkon api settings` redundant** given `settings.json` plus `/arkon config`? It is the only way to
-   read *current* values rather than defaults, but confirm that is actually wanted before it is built.
+Answered by the launcher on 2026-08-05.
+
+| Question | Answer |
+|---|---|
+| `/arkon state` → `arkon api players` | **Accepted, no alias.** Nothing written yet on their side, so nothing to migrate — and carrying two names for one call from day one is how the inconsistency this fixes began. |
+| Report the client's mod version? | **No.** `hasMod` is the actionable fact because it decides what noclip does; a version tells them a mismatch exists without telling them what to do. Saves retaining handshake state. |
+| Page size | **Server-chosen**, cursor in the envelope. The client follows it until absent. |
+| Is `arkon api settings` wanted? | **Yes**, and it is the call to build first. See above. |
+
+`setCommand` in `permissions.json` lands as originally promised, with `<player>` and `<value>`
+placeholders, so the launcher's existing substitution keeps working unchanged.

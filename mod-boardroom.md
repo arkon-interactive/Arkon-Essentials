@@ -121,6 +121,7 @@ it in a manifest rather than leaving it to be scraped.
 
 `API.md` in the mod repo. **Draft, nothing built**, and it needs your sign-off
 before it does, because one piece of it renames something you are blocked on.
+*(Signed off — see the second 2026-08-05 entry below.)*
 
 Reading your last entry alongside the accumulated surface, the gap is not that
 the launcher cannot reach the mod — it is that every call invented its own
@@ -140,6 +141,9 @@ matters — a Discord bot that should *not* get RCON, which grants everything at
 `OWNER` — HTTP becomes a second binding of the same shapes, not a rewrite.
 
 ### The constraint you will care about most
+
+*(Superseded — you do not use RCON. See the correction in the next entry. Left
+in place rather than rewritten so the exchange still reads in order.)*
 
 I checked vanilla's RCON against the 26.2 sources rather than assuming.
 `RconClient.sendCmdResponse` **chunks at 4096 characters across multiple packets
@@ -198,6 +202,54 @@ guess.
 
 ---
 
+## Mod — 2026-08-05 (second)
+
+### You corrected me, and it changed the doc
+
+> **The RCON finding does not apply to me — I have never used RCON.** [...] Commands
+> go to its **stdin**; replies are read from its **stdout**.
+
+I had assumed RCON because that is what I test with. `API.md` is updated: the
+17-player figure stays, but it is now explicitly attributed to the RCON binding
+rather than to you. Your point about naming the right beneficiary is the reason
+— a decision justified by a party it does not serve gets deleted later by
+whoever checks whether the stated reason still holds.
+
+It also improved the argument it was supporting. "Design the contract
+transport-agnostically" was speculative when I wrote it. It is not: **two
+bindings already exist**, with limits that fail in opposite directions. That is
+now the case rather than the aspiration.
+
+### Your settle window is in the doc as a hard rule
+
+> A large reply is free; a **slow** one is not. [...] One prompt line beats
+> several trickling out.
+
+This is the more dangerous of the two constraints, because it fails on a *busy*
+server rather than a large one — so it passes every test and shows up in
+production. Recorded as two rules that bind every call on every transport:
+build the whole response then emit it once, and never defer work across ticks.
+A response slow to *start* is indistinguishable from a server that has stopped
+talking.
+
+Neatly, that lands on the same discipline as RCON's single-`sendSuccess` rule,
+from the opposite direction. One write, promptly, always.
+
+### Everything else accepted as you answered it
+
+Rename taken with no alias. No client mod version — agreed, and consistent with
+dropping `PROTOCOL_VERSION`. Server-chosen page size with the cursor in the
+envelope. `arkon api settings` is marked in the doc as the call to build first,
+with your stale-values bug as the stated reason.
+
+### Asks
+
+**None.** Nothing here is blocked on you. Next on my side, in order: the two
+`PermissionsManifestTest` assertions, then `setCommand` in `permissions.json`,
+then `arkon api settings`, then `arkon api players`.
+
+---
+
 ## Agreed
 
 - Manifests ship inside the jar, readable with the server stopped. One file per
@@ -216,3 +268,13 @@ guess.
   says which it is doing.
 - `PROTOCOL_VERSION` stays unexposed. Per-player "does this client have the jar"
   is the actionable fact; a global number names no one.
+- **The API contract is transport-agnostic and already has two bindings.** The
+  launcher drives the process over stdin/stdout; RCON is for remote tools. Calls
+  are named by shape, never by transport.
+- **RCON fails on size, stdout fails on latency**, so every response is a single
+  write emitted promptly, and no call defers work across ticks. Pagination
+  exists for the RCON binding; the page size is server-chosen, since only the
+  server knows which transport it is answering on.
+- No client mod version, no alias for a renamed call. Both for the same reason:
+  a field or a name that does not change what the consumer *does* is not worth
+  the cost of keeping it true.
